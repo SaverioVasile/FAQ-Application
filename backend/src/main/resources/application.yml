@@ -26,9 +26,9 @@ server:
 
 app:
   mail:
-    enabled: ${APP_MAIL_ENABLED:false}
-    provider: ${APP_MAIL_PROVIDER:smtp}
-    from: ${APP_MAIL_FROM:no-reply@example.com}
+    enabled: ${APP_MAIL_ENABLED:true}
+    provider: ${APP_MAIL_PROVIDER:ses}
+    from: ${APP_MAIL_FROM:saverio.vasile@gmail.com}
     ses:
       region: ${APP_MAIL_SES_REGION:eu-west-1}
       access-key: ${APP_MAIL_SES_ACCESS_KEY:}

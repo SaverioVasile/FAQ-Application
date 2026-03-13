@@ -6,6 +6,8 @@ import com.deeptrace.faq.dto.SubmissionSummaryResponse;
 import com.deeptrace.faq.model.RespondentType;
 import com.deeptrace.faq.model.Submission;
 import com.deeptrace.faq.repository.SubmissionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Service
 public class SubmissionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SubmissionService.class);
 
     private final SubmissionRepository submissionRepository;
     private final ScoreService scoreService;
@@ -58,6 +62,7 @@ public class SubmissionService {
                 message = "Questionario salvato. Invio email disabilitato localmente (app.mail.enabled=false).";
             }
         } catch (Exception ex) {
+            log.error("Errore durante l'invio email per submission id={}", saved.getId(), ex);
             saved.setEmailSent(false);
             saved.setEmailError(ex.getMessage());
             message = "Questionario salvato, ma invio email fallito: " + ex.getMessage();

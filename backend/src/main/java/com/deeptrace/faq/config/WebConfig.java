@@ -1,7 +1,9 @@
-package main.java.com.deeptrace.faq.config;
+package com.deeptrace.faq.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import java.util.Objects;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -12,9 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
     private String[] allowedOrigins;
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOrigins(Objects.requireNonNull(allowedOrigins, "allowedOrigins must not be null"))
                 .allowedMethods("GET", "POST", "OPTIONS")
                 .allowedHeaders("*");
     }

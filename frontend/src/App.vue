@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watchEffect } from 'vue'
 import { faqQuestions, scoreLegend } from './constants/questions'
 import { fetchSubmissions, submitQuestionnaire } from './services/api'
 
@@ -28,6 +28,16 @@ const canSubmit = computed(() => {
     return false
   }
   return true
+})
+
+watchEffect(() => {
+  console.log('canSubmit debug', {
+    canSubmit: canSubmit.value,
+    patientEmail: form.patientEmail,
+    respondentType: form.respondentType,
+    respondentOther: form.respondentType === 'ALTRO' ? form.respondentOther : '',
+    answers: [...form.answers]
+  })
 })
 
 async function loadSubmissions() {

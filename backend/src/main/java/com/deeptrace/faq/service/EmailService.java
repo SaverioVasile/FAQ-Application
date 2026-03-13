@@ -21,6 +21,7 @@ import software.amazon.awssdk.services.ses.model.SendRawEmailRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Properties;
 
 @Service
@@ -70,11 +71,15 @@ public class EmailService {
     private void sendViaSmtp(String recipient, byte[] pdfBytes, String filename) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromAddress);
-        helper.setTo(recipient);
+        helper.setFrom(Objects.requireNonNull(fromAddress, "fromAddress must not be null"));
+        helper.setTo(Objects.requireNonNull(recipient, "recipient must not be null"));
+        helper.setCc(Objects.requireNonNull(fromAddress, "fromAddress must not be null"));
         helper.setSubject("Report questionario FAQ");
         helper.setText("In allegato trovi il report PDF del questionario FAQ.");
-        helper.addAttachment(filename, new ByteArrayResource(pdfBytes));
+        helper.addAttachment(
+                Objects.requireNonNull(filename, "filename must not be null"),
+                new ByteArrayResource(Objects.requireNonNull(pdfBytes, "pdfBytes must not be null"))
+        );
 
         mailSender.send(message);
     }
@@ -82,11 +87,15 @@ public class EmailService {
     private void sendViaSes(String recipient, byte[] pdfBytes, String filename) throws MessagingException, IOException {
         MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromAddress);
-        helper.setTo(recipient);
+        helper.setFrom(Objects.requireNonNull(fromAddress, "fromAddress must not be null"));
+        helper.setTo(Objects.requireNonNull(recipient, "recipient must not be null"));
+        helper.setCc(Objects.requireNonNull(fromAddress, "fromAddress must not be null"));
         helper.setSubject("Report questionario FAQ");
         helper.setText("In allegato trovi il report PDF del questionario FAQ.");
-        helper.addAttachment(filename, new ByteArrayResource(pdfBytes));
+        helper.addAttachment(
+                Objects.requireNonNull(filename, "filename must not be null"),
+                new ByteArrayResource(Objects.requireNonNull(pdfBytes, "pdfBytes must not be null"))
+        );
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         message.writeTo(outputStream);
