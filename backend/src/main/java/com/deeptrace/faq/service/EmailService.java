@@ -19,6 +19,8 @@ import software.amazon.awssdk.services.ses.SesClient;
 import software.amazon.awssdk.services.ses.SesClientBuilder;
 import software.amazon.awssdk.services.ses.model.RawMessage;
 import software.amazon.awssdk.services.ses.model.SendRawEmailRequest;
+import software.amazon.awssdk.services.ses.model.SendRawEmailResponse;
+import software.amazon.awssdk.services.ses.model.VerifyEmailIdentityRequest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -122,7 +124,8 @@ public class EmailService {
                 .rawMessage(RawMessage.builder().data(SdkBytes.fromByteArray(outputStream.toByteArray())).build())
                 .build();
 
-        sesClient.sendRawEmail(request);
+        SendRawEmailResponse response = sesClient.sendRawEmail(request);
+        log.info("SES sendRawEmail completed. messageId={}", response.messageId());
     }
 
     private SesClient buildSesClient(String sesRegion, String sesAccessKey, String sesSecretKey) {
@@ -137,5 +140,18 @@ public class EmailService {
         }
 
         return builder.build();
+    }
+
+    public void requestSesEmailVerification(String email) {
+        if (!mailEnabled || !PROVIDER_SES.equals(provider)) {
+            log.warn("Richiesta verifica SES ignorata per email={} perché provider={} o mailEnabled={}", email, provider, mailEnabled);
+            throw new IllegalStateException("Verifica email disponibile solo quando il provider SES è attivo (app.mail.enabled=true, app.mail.provider=ses).");
+        }
+
+        log.info("Richiesta verifica email SES per email={}", email);
+        VerifyEmailIdentityRequest request = VerifyEmailIdentityRequest.builder()
+                .emailAddress(Objects.requireNonNull(email, "email must not be null"))
+                .build();
+        sesClient.verifyEmailIdentity(request);
     }
 }

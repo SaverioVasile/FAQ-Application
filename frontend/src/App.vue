@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { faqQuestions, scoreLegend } from './constants/questions'
-import { fetchSubmissions, submitQuestionnaire } from './services/api'
+import { fetchSubmissions, submitQuestionnaire, requestSesEmailVerification } from './services/api'
 
 const form = reactive({
   respondentType: 'CAREGIVER',
@@ -16,6 +16,11 @@ const successMessage = ref('')
 const result = ref(null)
 const submissions = ref([])
 
+const adminEmail = ref('')
+const adminMessage = ref('')
+const adminError = ref('')
+const isAdminSubmitting = ref(false)
+
 const totalPreview = computed(() =>
   form.answers.reduce((acc, value) => acc + (value === '' ? 0 : Number(value)), 0)
 )
@@ -29,7 +34,6 @@ const canSubmit = computed(() => {
   }
   return true
 })
-
 
 async function loadSubmissions() {
   try {
@@ -66,6 +70,23 @@ async function onSubmit() {
     errorMessage.value = error?.response?.data?.message || 'Errore durante la sottomissione.'
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function onAdminRequestVerification() {
+  if (!adminEmail.value) return
+
+  isAdminSubmitting.value = true
+  adminMessage.value = ''
+  adminError.value = ''
+
+  try {
+    const res = await requestSesEmailVerification(adminEmail.value)
+    adminMessage.value = res.message || 'Richiesta di verifica inviata. Controlla la casella email del destinatario.'
+  } catch (error) {
+    adminError.value = error?.response?.data?.message || 'Errore durante la richiesta di verifica.'
+  } finally {
+    isAdminSubmitting.value = false
   }
 }
 
@@ -199,6 +220,38 @@ onMounted(loadSubmissions)
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section class="rounded-xl bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Admin - Verifica indirizzi email SES</h2>
+        <p class="mt-2 text-sm text-slate-600">
+          Inserisci un indirizzo email per cui inviare la richiesta di verifica SES. L'utente dovrà aprire l'email
+          inviata da AWS e cliccare sul link per completare la verifica.
+        </p>
+
+        <form class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" @submit.prevent="onAdminRequestVerification">
+          <input
+            v-model="adminEmail"
+            type="email"
+            required
+            class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            placeholder="email-da-verificare@example.com"
+          />
+          <button
+            type="submit"
+            :disabled="isAdminSubmitting"
+            class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {{ isAdminSubmitting ? 'Invio richiesta...' : 'Invia richiesta verifica' }}
+          </button>
+        </form>
+
+        <p v-if="adminMessage" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          {{ adminMessage }}
+        </p>
+        <p v-if="adminError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ adminError }}
+        </p>
       </section>
     </div>
   </main>
