@@ -36,8 +36,13 @@ public class SubmissionService {
 
     @Transactional
     public SubmissionResponse submit(SubmissionRequest request) {
+        log.info("Ricevuta nuova submission per email={}", request.getPatientEmail());
+
         scoreService.validateAnswers(request.getAnswers());
+        log.info("Validazione risposte completata per email={}", request.getPatientEmail());
+
         validateRespondent(request);
+        log.info("Validazione tipo compilatore completata per email={}", request.getPatientEmail());
 
         Submission submission = new Submission();
         submission.setRespondentType(request.getRespondentType());
@@ -50,9 +55,11 @@ public class SubmissionService {
         submission.setEmailSent(false);
 
         Submission saved = submissionRepository.save(submission);
+        log.info("Questionario salvato su DB con id={} e punteggio={}", saved.getId(), saved.getTotalScore());
 
         byte[] reportBytes = pdfReportService.generateReport(saved);
         String fileName = "report-faq-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(saved.getSubmittedAt().atZone(java.time.ZoneId.systemDefault())) + ".pdf";
+        log.info("Report PDF generato per submission id={} con filename={}", saved.getId(), fileName);
 
         String message = "Questionario salvato correttamente.";
         try {
@@ -60,6 +67,9 @@ public class SubmissionService {
             saved.setEmailSent(sent);
             if (!sent) {
                 message = "Questionario salvato. Invio email disabilitato localmente (app.mail.enabled=false).";
+                log.info("Questionario id={} salvato. Invio email disabilitato.", saved.getId());
+            } else {
+                log.info("Questionario id={} salvato e email inviata con successo.", saved.getId());
             }
         } catch (Exception ex) {
             log.error("Errore durante l'invio email per submission id={}", saved.getId(), ex);
@@ -69,6 +79,7 @@ public class SubmissionService {
         }
 
         submissionRepository.save(saved);
+        log.info("Stato finale submission id={} salvato. emailSent={}, message='{}'", saved.getId(), saved.getEmailSent(), message);
         return new SubmissionResponse(saved.getId(), saved.getTotalScore(), saved.getEmailSent(), message);
     }
 

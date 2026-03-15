@@ -3,6 +3,8 @@ package com.deeptrace.faq.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -27,6 +29,8 @@ import java.util.Properties;
 @Service
 public class EmailService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
     private static final String PROVIDER_SMTP = "smtp";
     private static final String PROVIDER_SES = "ses";
 
@@ -48,15 +52,27 @@ public class EmailService {
         this.fromAddress = fromAddress;
         this.provider = provider.toLowerCase(Locale.ROOT);
         this.sesClient = buildSesClient(sesRegion, sesAccessKey, sesSecretKey);
+
+        log.info("EmailService initialized - enabled={}, provider={}, from={}, sesRegion={}, hasCustomSesCredentials={}",
+                this.mailEnabled,
+                this.provider,
+                this.fromAddress,
+                sesRegion,
+                sesAccessKey != null && !sesAccessKey.isBlank() && sesSecretKey != null && !sesSecretKey.isBlank());
     }
 
     public boolean sendReport(String recipient, byte[] pdfBytes, String filename) throws MessagingException, IOException {
         if (!mailEnabled) {
+            log.info("Email sending disabled (app.mail.enabled=false). Skipping send for recipient={}, filename={}", recipient, filename);
             return false;
         }
 
+        log.info("Preparing email report for recipient={}, filename={}, provider={}", recipient, filename, provider);
+
         if (PROVIDER_SES.equals(provider)) {
+            log.info("Sending email via SES to recipient={}", recipient);
             sendViaSes(recipient, pdfBytes, filename);
+            log.info("Email via SES sent successfully to recipient={}", recipient);
             return true;
         }
 
@@ -64,7 +80,9 @@ public class EmailService {
             throw new IllegalArgumentException("Provider email non supportato: " + provider + ". Usa 'smtp' o 'ses'.");
         }
 
+        log.info("Sending email via SMTP to recipient={}", recipient);
         sendViaSmtp(recipient, pdfBytes, filename);
+        log.info("Email via SMTP sent successfully to recipient={}", recipient);
         return true;
     }
 

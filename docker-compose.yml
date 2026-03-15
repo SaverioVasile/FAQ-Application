@@ -31,6 +31,9 @@ services:
       APP_DB_RDS_URL: ${APP_DB_RDS_URL:-}
       APP_DB_RDS_USERNAME: ${APP_DB_RDS_USERNAME:-}
       APP_DB_RDS_PASSWORD: ${APP_DB_RDS_PASSWORD:-}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/faqdb
+      SPRING_DATASOURCE_USERNAME: faq
+      SPRING_DATASOURCE_PASSWORD: faq
       APP_MAIL_ENABLED: ${APP_MAIL_ENABLED:-false}
       APP_MAIL_PROVIDER: ${APP_MAIL_PROVIDER:-smtp}
       APP_MAIL_FROM: ${APP_MAIL_FROM:-no-reply@example.com}
