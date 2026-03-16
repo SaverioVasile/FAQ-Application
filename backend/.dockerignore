@@ -1,4 +1,5 @@
 target
 .git
 .idea
+src/main/resources/mytoken
 

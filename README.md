@@ -24,7 +24,7 @@ Applicazione dimostrativa end-to-end per la prova DeepTrace:
 
 ```bash
 cd /Users/saverio.vasile/IdeaProjects/Test
-cp .env.example .env
+cp ..env.example ..env
 
 docker compose -f docker-compose.yml up --build
 ```
@@ -124,6 +124,73 @@ npm run dev
 cd /Users/saverio.vasile/IdeaProjects/Test/backend
 mvn test
 ```
+
+## Deploy AWS (passi 3, 4, 5)
+
+### Step 3 - Deploy backend su Elastic Beanstalk
+
+1. Inizializza EB una volta sola (dentro `backend/`):
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test/backend
+eb init
+eb create faq-backend-prod --single
+```
+
+2. Prepara env file locale:
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test
+cp .env.aws.backend.example .env.aws.backend
+```
+
+3. Compila `.env.aws.backend` con valori reali RDS/SES/CORS, poi deploy:
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test
+./scripts/deploy-backend-eb.sh
+```
+
+Puoi passare un env file custom:
+
+```bash
+./scripts/deploy-backend-eb.sh /percorso/custom.env
+```
+
+### Step 4 - Build e publish frontend su S3 (+ CloudFront)
+
+1. Prepara env file locale:
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test
+cp .env.aws.frontend.example .env.aws.frontend
+```
+
+2. Compila `.env.aws.frontend` con backend URL pubblico, bucket S3 e (opzionale) distribution id CloudFront.
+
+3. Deploy frontend:
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test
+./scripts/deploy-frontend-s3.sh
+```
+
+Puoi passare un env file custom:
+
+```bash
+./scripts/deploy-frontend-s3.sh /percorso/custom.env
+```
+
+### Step 5 - CORS produzione
+
+Imposta `APP_CORS_ALLOWED_ORIGINS` con il dominio pubblico frontend (CloudFront o dominio custom) in `.env.aws.backend`, poi riesegui:
+
+```bash
+cd /Users/saverio.vasile/IdeaProjects/Test
+./scripts/deploy-backend-eb.sh
+```
+
+Il backend usa `APP_CORS_ALLOWED_ORIGINS` in `backend/src/main/java/com/deeptrace/faq/config/WebConfig.java`.
 
 ## Maven dalla root (backend + frontend wrapper)
 

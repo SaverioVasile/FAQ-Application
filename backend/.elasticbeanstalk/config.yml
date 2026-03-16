@@ -1,0 +1,10 @@
+branch-defaults:
+  main:
+    environment: faq-backend-prod
+global:
+  application_name: faq-backend
+  default_region: eu-west-1
+  include_git_submodules: true
+  platform_name: Docker
+  workspace_type: Application
+
