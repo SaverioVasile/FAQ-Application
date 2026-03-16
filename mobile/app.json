@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "FAQ DeepTrace",
+    "slug": "faq-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.deeptrace.faq"
+    },
+    "android": {
+      "package": "com.deeptrace.faq",
+      "adaptiveIcon": {
+        "backgroundColor": "#4f46e5"
+      }
+    }
+  }
+}
+
