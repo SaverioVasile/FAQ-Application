@@ -52,8 +52,10 @@ public class EmailService {
         this.mailSender = mailSender;
         this.mailEnabled = mailEnabled;
         this.fromAddress = fromAddress;
-        this.provider = provider.toLowerCase(Locale.ROOT);
-        this.sesClient = buildSesClient(sesRegion, sesAccessKey, sesSecretKey);
+        this.provider = normalizeProvider(provider);
+        this.sesClient = PROVIDER_SES.equals(this.provider)
+                ? buildSesClient(sesRegion, sesAccessKey, sesSecretKey)
+                : null;
 
         log.info("EmailService initialized - enabled={}, provider={}, from={}, sesRegion={}, hasCustomSesCredentials={}",
                 this.mailEnabled,
@@ -105,6 +107,8 @@ public class EmailService {
     }
 
     private void sendViaSes(String recipient, byte[] pdfBytes, String filename) throws MessagingException, IOException {
+        SesClient activeSesClient = requireSesClient();
+
         MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom(Objects.requireNonNull(fromAddress, "fromAddress must not be null"));
@@ -124,7 +128,7 @@ public class EmailService {
                 .rawMessage(RawMessage.builder().data(SdkBytes.fromByteArray(outputStream.toByteArray())).build())
                 .build();
 
-        SendRawEmailResponse response = sesClient.sendRawEmail(request);
+        SendRawEmailResponse response = activeSesClient.sendRawEmail(request);
         log.info("SES sendRawEmail completed. messageId={}", response.messageId());
     }
 
@@ -152,6 +156,19 @@ public class EmailService {
         VerifyEmailIdentityRequest request = VerifyEmailIdentityRequest.builder()
                 .emailAddress(Objects.requireNonNull(email, "email must not be null"))
                 .build();
-        sesClient.verifyEmailIdentity(request);
+        requireSesClient().verifyEmailIdentity(request);
+    }
+
+    private String normalizeProvider(String provider) {
+        return Objects.requireNonNullElse(provider, PROVIDER_SMTP)
+                .trim()
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private SesClient requireSesClient() {
+        if (sesClient == null) {
+            throw new IllegalStateException("SES client non inizializzato perché app.mail.provider non è impostato su 'ses'.");
+        }
+        return sesClient;
     }
 }

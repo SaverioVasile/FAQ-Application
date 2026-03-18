@@ -1,247 +1,165 @@
-# FAQ Questionnaire App (Spring Boot + Vue)
+# FAQ Questionnaire App
 
-Applicazione dimostrativa end-to-end per la prova DeepTrace:
-- compilazione questionario FAQ (10 domande)
-- salvataggio su PostgreSQL
-- calcolo punteggio totale
-- generazione report PDF
-- invio report via email con provider configurabile (SMTP o AWS SES API)
-- visualizzazione ultime sottomissioni (bonus)
+Applicazione end-to-end per la compilazione del questionario FAQ DeepTrace:
 
-## Struttura progetto
+- Compilazione questionario (10 domande, scala 0–5)
+- Salvataggio su PostgreSQL con calcolo punteggio
+- Generazione automatica report PDF
+- Invio report via email (SMTP o AWS SES)
+- Visualizzazione storico sottomissioni
+- Pannello admin per verifica indirizzi email SES
 
-- `backend/` Spring Boot 3 (Java 17)
-- `frontend/` Vue 3 + Vite + Tailwind
-- `docker-compose.yml` deploy locale con PostgreSQL
-- `docs/aws-migration.md` note per passaggio su AWS
+---
+
+## Struttura del progetto
+
+```
+/
+├── backend/        Spring Boot 3 (Java 17)
+├── frontend/       Vue 3 + Vite + Tailwind CSS
+├── mobile/         React Native (Expo)
+├── docs/           Documentazione tecnica
+└── docker-compose.yml
+```
+
+---
 
 ## Prerequisiti
 
-- Docker + Docker Compose
-- (Opzionale per run locale senza container) Java 17, Maven, Node 20+
+| Strumento | Versione minima |
+|---|---|
+| Docker + Docker Compose | qualsiasi versione recente |
+| Java 17 | solo per esecuzione senza Docker |
+| Maven 3.8+ | solo per esecuzione senza Docker |
+| Node.js 20+ | solo per esecuzione senza Docker |
 
-## Avvio rapido con Docker Compose (locale)
+---
+
+## Avvio rapido (Docker Compose)
+
+**1. Copia e configura il file delle variabili d'ambiente:**
 
 ```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-cp ..env.example ..env
-
-docker compose -f docker-compose.yml up --build
+cp .env.example .env
 ```
 
-App disponibili su:
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8080`
+Apri `.env` e compila almeno le variabili obbligatorie (vedi sezione Configurazione).
 
-## API principali
+**2. Avvia tutti i container:**
 
-- `POST /api/submissions`
-- `GET /api/submissions`
-
-### Payload esempio POST
-
-```json
-{
-  "respondentType": "CAREGIVER",
-  "respondentOther": null,
-  "patientEmail": "test@example.com",
-  "answers": [0, 1, 2, 3, 4, 5, 0, 1, 2, 3]
-}
+```bash
+docker compose up --build
 ```
 
-## Configurazione database (provider selezionabile)
+**3. Accedi all'app:**
 
-Puoi scegliere il database con `APP_DB_PROVIDER`:
-- `local` usa PostgreSQL locale/containerizzato
-- `rds` usa PostgreSQL su AWS RDS
+| Servizio | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8080 |
 
-### Opzione A: locale (default)
+Per fermare i container:
+
+```bash
+docker compose down
+```
+
+---
+
+## Configurazione
+
+Tutte le variabili si impostano nel file `.env` nella root del progetto.
+
+### Database
+
+Seleziona il provider con `APP_DB_PROVIDER`:
 
 ```dotenv
+# Usa PostgreSQL locale (container Docker) — default
 APP_DB_PROVIDER=local
 APP_DB_LOCAL_URL=jdbc:postgresql://postgres:5432/faqdb
 APP_DB_LOCAL_USERNAME=faq
 APP_DB_LOCAL_PASSWORD=faq
-```
 
-### Opzione B: AWS RDS
-
-```dotenv
+# Oppure usa AWS RDS
 APP_DB_PROVIDER=rds
 APP_DB_RDS_URL=jdbc:postgresql://<rds-endpoint>:5432/<database>
 APP_DB_RDS_USERNAME=<username>
 APP_DB_RDS_PASSWORD=<password>
 ```
 
-Con `APP_DB_PROVIDER=rds`, il backend usa esclusivamente i parametri `APP_DB_RDS_*`.
+### Email
 
-## Configurazione email (provider selezionabile)
+Seleziona il provider con `APP_MAIL_PROVIDER` e abilita l'invio con `APP_MAIL_ENABLED`:
 
-Per abilitare invio email reale:
-1. Verifica indirizzo/domain su SES (necessario in entrambi i casi).
-2. Imposta `APP_MAIL_ENABLED=true`.
-3. Scegli `APP_MAIL_PROVIDER=smtp` oppure `APP_MAIL_PROVIDER=ses`.
-4. Configura le variabili del provider scelto in `.env`.
-5. Riavvia i container.
+```dotenv
+# Disabilitato (default): il flusso funziona ma non invia email
+APP_MAIL_ENABLED=false
 
-### Opzione A: SMTP
+# Abilitato con SMTP
+APP_MAIL_ENABLED=true
+APP_MAIL_PROVIDER=smtp
+SPRING_MAIL_HOST=smtp.example.com
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=user@example.com
+SPRING_MAIL_PASSWORD=secret
 
-Usa le variabili Spring Mail:
-- `SPRING_MAIL_HOST`
-- `SPRING_MAIL_PORT`
-- `SPRING_MAIL_USERNAME`
-- `SPRING_MAIL_PASSWORD`
+# Abilitato con AWS SES
+APP_MAIL_ENABLED=true
+APP_MAIL_PROVIDER=ses
+APP_MAIL_FROM=noreply@yourdomain.com
+APP_MAIL_SES_REGION=eu-west-1
+APP_MAIL_SES_ACCESS_KEY=<aws-access-key>
+APP_MAIL_SES_SECRET_KEY=<aws-secret-key>
+```
 
-### Opzione B: AWS SES API
+> Se `APP_MAIL_ENABLED=false`, dati e PDF vengono comunque generati ma non inviati.
 
-Usa le variabili SES:
-- `APP_MAIL_SES_REGION`
-- `APP_MAIL_SES_ACCESS_KEY`
-- `APP_MAIL_SES_SECRET_KEY`
-
-Se access key/secret key non sono valorizzate, l'app prova la AWS Default Credentials Chain.
-
-Se `APP_MAIL_ENABLED=false`, il flusso resta dimostrabile: dati e PDF vengono generati, ma non inviati.
+---
 
 ## Esecuzione senza Docker (opzionale)
 
-Backend:
+**Backend:**
 ```bash
-cd /Users/saverio.vasile/IdeaProjects/Test/backend
+cd backend
 mvn spring-boot:run
 ```
 
-Frontend:
+**Frontend:**
 ```bash
-cd /Users/saverio.vasile/IdeaProjects/Test/frontend
+cd frontend
 npm install
 npm run dev
 ```
 
-## Test backend
-
+**Test backend:**
 ```bash
-cd /Users/saverio.vasile/IdeaProjects/Test/backend
-mvn test
+cd backend
+mvn test -s ../.mvn-settings-personal.xml
 ```
 
-## Deploy AWS (passi 3, 4, 5)
+---
 
-### Step 3 - Deploy backend su Elastic Beanstalk
+## API principali
 
-1. Inizializza EB una volta sola (dentro `backend/`):
+| Metodo | Endpoint | Descrizione |
+|---|---|---|
+| POST | `/api/submissions` | Invia questionario |
+| GET | `/api/submissions` | Lista sottomissioni |
+| POST | `/api/admin/ses-verify-email` | Richiedi verifica email SES |
 
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test/backend
-eb init
-eb create faq-backend-prod --single
+**Payload POST `/api/submissions`:**
+```json
+{
+  "respondentType": "CAREGIVER",
+  "respondentOther": null,
+  "patientEmail": "paziente@example.com",
+  "answers": [0, 1, 2, 3, 4, 5, 0, 1, 2, 3]
+}
 ```
 
-2. Prepara env file locale:
+---
 
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-cp .env.aws.backend.example .env.aws.backend
-```
+## Deploy AWS
 
-3. Compila `.env.aws.backend` con valori reali RDS/SES/CORS, poi deploy:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-./scripts/deploy-backend-eb.sh
-```
-
-Puoi passare un env file custom:
-
-```bash
-./scripts/deploy-backend-eb.sh /percorso/custom.env
-```
-
-### Step 4 - Build e publish frontend su S3 (+ CloudFront)
-
-1. Prepara env file locale:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-cp .env.aws.frontend.example .env.aws.frontend
-```
-
-2. Compila `.env.aws.frontend` con backend URL pubblico, bucket S3 e (opzionale) distribution id CloudFront.
-
-3. Deploy frontend:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-./scripts/deploy-frontend-s3.sh
-```
-
-Puoi passare un env file custom:
-
-```bash
-./scripts/deploy-frontend-s3.sh /percorso/custom.env
-```
-
-### Step 5 - CORS produzione
-
-Imposta `APP_CORS_ALLOWED_ORIGINS` con il dominio pubblico frontend (CloudFront o dominio custom) in `.env.aws.backend`, poi riesegui:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-./scripts/deploy-backend-eb.sh
-```
-
-Il backend usa `APP_CORS_ALLOWED_ORIGINS` in `backend/src/main/java/com/deeptrace/faq/config/WebConfig.java`.
-
-## Maven dalla root (backend + frontend wrapper)
-
-Puoi eseguire Maven dalla root del progetto (`Test/`) per lavorare a moduli:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-mvn -pl backend -am test
-mvn -Pfrontend-build -pl frontend -am prepare-package
-```
-
-> Nota: il modulo `frontend` esegue `npm install` + `npm run build` solo con profilo `-Pfrontend-build`.
-> Nota: il progetto include `.mvn/maven.config`, quindi Maven usa automaticamente `/.mvn-settings-personal.xml` anche da IntelliJ.
-
-### Se npm fallisce con certificati (SELF_SIGNED_CERT_IN_CHAIN)
-
-1. Copia il file di esempio in una configurazione locale npm del frontend:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-cp frontend/.npmrc.example frontend/.npmrc
-```
-
-2. Imposta il percorso reale del certificato CA aziendale in `frontend/.npmrc` (`cafile=...`).
-
-3. Riprova la build del modulo frontend:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-mvn -pl frontend -am prepare-package
-
-# con frontend profile attivo
-mvn -Pfrontend-build -pl frontend -am prepare-package
-```
-
-Opzione temporanea (solo troubleshooting, non consigliata):
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test/frontend
-npm config set strict-ssl false
-```
-
-### Se Maven fallisce con PKIX / certificate_unknown
-
-Se sei dietro rete aziendale con TLS inspection, prepara truststore locale progetto:
-
-```bash
-cd /Users/saverio.vasile/IdeaProjects/Test
-./scripts/setup-maven-truststore.sh
-mvn -s /Users/saverio.vasile/IdeaProjects/Test/.mvn-settings-personal.xml test
-```
-
-Il progetto include `/.mvn/jvm.config`, quindi Maven usera automaticamente `/.certs/maven-truststore.p12`.
-
+Per il deploy su AWS (Elastic Beanstalk + S3 + RDS + SES) consulta [`docs/aws-migration.md`](docs/aws-migration.md).
