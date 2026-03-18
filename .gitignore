@@ -45,3 +45,5 @@ backend/src/main/resources/mytoken
 .certs/
 
 .env.local
+
+.global-bundle.pem
