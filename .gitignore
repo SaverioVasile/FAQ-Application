@@ -47,3 +47,4 @@ backend/src/main/resources/mytoken
 .env.local
 
 .global-bundle.pem
+mobile/package-lock.json
