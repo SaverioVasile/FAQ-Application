@@ -44,3 +44,4 @@ backend/src/main/resources/mytoken
 # Local TLS certs/truststore for Maven
 .certs/
 
+.env.local
