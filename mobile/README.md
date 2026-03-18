@@ -48,6 +48,8 @@ Expo aprirà un QR code nel terminale o nel browser. Scansionalo con l'app **Exp
 | `EXPO_PUBLIC_API_BASE_URL_PUBLIC` | URL backend pubblico |
 | `EXPO_PUBLIC_API_BASE_URL` | Override diretto (opzionale, ha priorita') |
 
+Nota: se lasci `EXPO_PUBLIC_API_TARGET` non valorizzato e imposti solo `EXPO_PUBLIC_API_BASE_URL_PUBLIC`, l'app usa automaticamente il target `public`.
+
 Esempio rapido in `.env`:
 
 ```dotenv
@@ -61,6 +63,12 @@ Per puntare all'istanza pubblica basta cambiare:
 ```dotenv
 EXPO_PUBLIC_API_TARGET=public
 ```
+
+Debug in-app (Expo Go):
+
+- Compare un box `Debug API` in basso con `target`, `base URL` e ultime chiamate HTTP.
+- Se non lo vuoi vedere: imposta `EXPO_PUBLIC_SHOW_DEBUG_OVERLAY=false`.
+- Se cambi `.env`, riavvia Expo con cache pulita: `npm start -- --clear`.
 
 Per trovare il tuo IP locale su macOS: `ipconfig getifaddr en0`
 
