@@ -192,7 +192,7 @@ onMounted(loadSubmissions)
       </section>
 
       <section class="rounded-xl bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">Ultime sottomissioni (bonus)</h2>
+        <h2 class="text-lg font-semibold text-slate-900">Ultime sottomissioni</h2>
         <div class="mt-3 overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="border-b border-slate-200 text-slate-600">
