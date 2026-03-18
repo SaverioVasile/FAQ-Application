@@ -6,6 +6,7 @@ Applicazione end-to-end per la compilazione del questionario FAQ DeepTrace:
 - Salvataggio su PostgreSQL con calcolo punteggio
 - Generazione automatica report PDF
 - Invio report via email (SMTP o AWS SES)
+- Salvataggio locale opzionale dei PDF generati (anche con email disabilitata)
 - Visualizzazione storico sottomissioni
 - Pannello admin per verifica indirizzi email SES
 
@@ -104,7 +105,7 @@ SPRING_MAIL_PORT=587
 SPRING_MAIL_USERNAME=user@example.com
 SPRING_MAIL_PASSWORD=secret
 
-# Abilitato con AWS SES
+# Abilitato con AWS SES (API)
 APP_MAIL_ENABLED=true
 APP_MAIL_PROVIDER=ses
 APP_MAIL_FROM=noreply@yourdomain.com
@@ -113,7 +114,21 @@ APP_MAIL_SES_ACCESS_KEY=<aws-access-key>
 APP_MAIL_SES_SECRET_KEY=<aws-secret-key>
 ```
 
-> Se `APP_MAIL_ENABLED=false`, dati e PDF vengono comunque generati ma non inviati.
+> Se `APP_MAIL_ENABLED=false`, i dati vengono comunque salvati e il PDF viene comunque generato in memoria.
+
+### Salvataggio locale dei PDF
+
+Puoi salvare il report PDF su disco anche quando l'invio email è disabilitato:
+
+```dotenv
+APP_PDF_SAVE_LOCAL=true
+APP_PDF_OUTPUT_DIR=./reports
+```
+
+- `APP_PDF_SAVE_LOCAL=false` (default): nessun file PDF viene salvato localmente
+- `APP_PDF_SAVE_LOCAL=true`: il backend salva i report nella cartella indicata da `APP_PDF_OUTPUT_DIR`
+
+Con Docker Compose, il default container-side è `APP_PDF_OUTPUT_DIR=/tmp/faq-reports`.
 
 ---
 
@@ -137,6 +152,11 @@ npm run dev
 cd backend
 mvn test -s ../.mvn-settings-personal.xml
 ```
+
+Copertura minima attuale lato backend:
+- `ScoreServiceTest` (calcolo punteggio e validazione risposte)
+- `EmailServiceTest` (dispatch SMTP/SES e mail disabled)
+- `PdfReportServiceTest` (generazione PDF valida e salvataggio locale opzionale)
 
 ---
 

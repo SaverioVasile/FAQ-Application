@@ -18,12 +18,12 @@ CHROME_CANDIDATES = [
 ]
 
 CSS = """<style>
-  @page { size: A4; margin: 2.2cm 2.2cm; }
+  @page { size: A4; margin: 2.0cm 2.0cm; }
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 11pt;
-    line-height: 1.65;
+    font-size: 10.8pt;
+    line-height: 1.58;
     color: #1e293b;
     max-width: none;
     margin: 0;
@@ -41,7 +41,7 @@ CSS = """<style>
     font-size: 14pt;
     font-weight: 700;
     color: #4f46e5;
-    margin-top: 32px;
+    margin-top: 27px;
     margin-bottom: 6px;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 4px;
@@ -50,25 +50,25 @@ CSS = """<style>
     font-size: 12pt;
     font-weight: 600;
     color: #334155;
-    margin-top: 20px;
+    margin-top: 17px;
     margin-bottom: 4px;
   }
-  p { margin: 8px 0; }
+  p { margin: 7px 0; }
   table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10pt;
-    margin: 14px 0;
+    margin: 12px 0;
   }
   th {
     background-color: #4f46e5;
     color: #fff;
-    padding: 7px 12px;
+    padding: 7px 11px;
     text-align: left;
     font-weight: 600;
   }
   td {
-    padding: 6px 12px;
+    padding: 6px 11px;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: top;
   }
@@ -101,19 +101,19 @@ CSS = """<style>
   }
   ul, ol {
     padding-left: 22px;
-    margin: 8px 0;
+    margin: 7px 0;
   }
   li { margin: 3px 0; }
   hr {
     border: none;
     border-top: 1px solid #e2e8f0;
-    margin: 28px 0;
+    margin: 24px 0;
   }
   .subtitle {
     font-size: 10pt;
     color: #64748b;
     margin-top: 0;
-    margin-bottom: 20px;
+    margin-bottom: 17px;
   }
 </style>"""
 

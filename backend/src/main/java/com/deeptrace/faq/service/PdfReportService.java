@@ -8,14 +8,22 @@ import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.UnitValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 @Service
 public class PdfReportService {
+
+    private static final Logger log = LoggerFactory.getLogger(PdfReportService.class);
 
     private static final String[] QUESTION_LABELS = {
             "Compilare assegni, pagare bollette, conti e fatture, tenere la contabilita",
@@ -29,6 +37,16 @@ public class PdfReportService {
             "Ricordare appuntamenti, ricorrenze, festivita, farmaci",
             "Spostarsi e viaggiare all'esterno del quartiere"
     };
+
+    private final boolean saveLocal;
+    private final Path outputDir;
+
+    public PdfReportService(@Value("${app.pdf.save-local:false}") boolean saveLocal,
+                            @Value("${app.pdf.output-dir:./reports}") String outputDir) {
+        this.saveLocal = saveLocal;
+        this.outputDir = Path.of(outputDir).normalize();
+    }
+
 
     public byte[] generateReport(Submission submission) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -65,5 +83,20 @@ public class PdfReportService {
         }
 
         return outputStream.toByteArray();
+    }
+
+    public void saveReportIfEnabled(String filename, byte[] pdfBytes) {
+        if (!saveLocal) {
+            return;
+        }
+
+        try {
+            Path filePath = outputDir.resolve(Objects.requireNonNull(filename, "filename must not be null"));
+            Files.createDirectories(outputDir);
+            Files.write(filePath, Objects.requireNonNull(pdfBytes, "pdfBytes must not be null"));
+            log.info("PDF salvato localmente in {}", filePath.toAbsolutePath());
+        } catch (Exception ex) {
+            throw new IllegalStateException("Errore durante il salvataggio locale del PDF", ex);
+        }
     }
 }

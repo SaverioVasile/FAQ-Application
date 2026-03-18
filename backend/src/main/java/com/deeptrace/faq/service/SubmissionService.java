@@ -60,6 +60,11 @@ public class SubmissionService {
         byte[] reportBytes = pdfReportService.generateReport(saved);
         String fileName = "report-faq-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(saved.getSubmittedAt().atZone(java.time.ZoneId.systemDefault())) + ".pdf";
         log.info("Report PDF generato per submission id={} con filename={}", saved.getId(), fileName);
+        try {
+            pdfReportService.saveReportIfEnabled(fileName, reportBytes);
+        } catch (Exception ex) {
+            log.warn("Impossibile salvare localmente il report PDF per submission id={}: {}", saved.getId(), ex.getMessage());
+        }
 
         String message = "Questionario salvato correttamente.";
         try {

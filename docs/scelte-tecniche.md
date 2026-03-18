@@ -30,6 +30,7 @@ Il backend espone una REST API JSON e gestisce:
 - persistenza su PostgreSQL
 - generazione del report PDF in memoria
 - invio del report via email
+- salvataggio locale opzionale del PDF tramite flag runtime
 
 ### Frontend — Vue 3 + Vite + Tailwind CSS
 
@@ -147,6 +148,11 @@ a runtime tramite variabili d'ambiente nel file `.env`, senza modificare il codi
 | `APP_DB_PROVIDER` | `local` / `rds` | Seleziona il DataSource da usare |
 | `APP_MAIL_ENABLED` | `true` / `false` | Abilita/disabilita invio email |
 | `APP_MAIL_PROVIDER` | `smtp` / `ses` | Seleziona il provider email |
+| `APP_PDF_SAVE_LOCAL` | `true` / `false` | Abilita salvataggio locale dei report PDF |
+| `APP_PDF_OUTPUT_DIR` | path filesystem | Directory dove salvare i PDF quando il flag e attivo |
+
+Con `APP_MAIL_ENABLED=false` il report viene comunque creato; se `APP_PDF_SAVE_LOCAL=true`
+il file viene persistito localmente per debugging o test end-to-end senza invio email.
 
 ### Migrazioni database
 
@@ -162,4 +168,11 @@ Per lo sviluppo locale è fornito un `docker-compose.yml` che avvia:
 - container **frontend** (immagine costruita dal Dockerfile `frontend/`)
 
 Tutti i servizi comunicano sulla rete Docker interna `faq-network`.
+
+### Strategia di test backend
+
+Il backend include test unitari su tre aree critiche:
+- **ScoreServiceTest**: validazione input e calcolo punteggio totale.
+- **EmailServiceTest**: selezione provider (`smtp`/`ses`) e comportamento con invio disabilitato.
+- **PdfReportServiceTest**: verifica PDF valido (header `%PDF`, contenuti attesi) e salvataggio locale condizionale.
 

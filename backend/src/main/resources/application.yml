@@ -39,6 +39,9 @@ app:
       region: ${APP_MAIL_SES_REGION:eu-west-1}
       access-key: ${APP_MAIL_SES_ACCESS_KEY:}
       secret-key: ${APP_MAIL_SES_SECRET_KEY:}
+  pdf:
+    save-local: ${APP_PDF_SAVE_LOCAL:false}
+    output-dir: ${APP_PDF_OUTPUT_DIR:./reports}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
