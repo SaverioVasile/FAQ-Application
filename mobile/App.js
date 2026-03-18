@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Text } from 'react-native';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import SubmissionsScreen from './src/screens/SubmissionsScreen';
-import AdminScreen from './src/screens/AdminScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,7 +18,6 @@ export default function App() {
             const icons = {
               Questionario: focused ? '📋' : '📄',
               Storico: focused ? '📊' : '📉',
-              Admin: focused ? '🔧' : '⚙️',
             };
             return <Text style={{ fontSize: 20 }}>{icons[route.name]}</Text>;
           },
@@ -40,11 +38,6 @@ export default function App() {
           name="Storico"
           component={SubmissionsScreen}
           options={{ title: 'Storico' }}
-        />
-        <Tab.Screen
-          name="Admin"
-          component={AdminScreen}
-          options={{ title: 'Admin' }}
         />
       </Tab.Navigator>
     </NavigationContainer>
