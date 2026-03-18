@@ -41,11 +41,26 @@ Expo aprirà un QR code nel terminale o nel browser. Scansionalo con l'app **Exp
 
 ## Configurazione URL backend
 
-| Scenario | `EXPO_PUBLIC_API_BASE_URL` |
+| Variabile | Descrizione |
 |---|---|
-| Simulatore iOS/Android | `http://localhost:8080` |
-| Dispositivo fisico (stessa rete Wi-Fi) | `http://<IP_DEL_TUO_PC>:8080` |
-| Produzione AWS | `https://your-backend.example.com` |
+| `EXPO_PUBLIC_API_TARGET` | `local` oppure `public` |
+| `EXPO_PUBLIC_API_BASE_URL_LOCAL` | URL backend locale |
+| `EXPO_PUBLIC_API_BASE_URL_PUBLIC` | URL backend pubblico |
+| `EXPO_PUBLIC_API_BASE_URL` | Override diretto (opzionale, ha priorita') |
+
+Esempio rapido in `.env`:
+
+```dotenv
+EXPO_PUBLIC_API_TARGET=local
+EXPO_PUBLIC_API_BASE_URL_LOCAL=http://192.168.1.20:8080
+EXPO_PUBLIC_API_BASE_URL_PUBLIC=https://your-backend.example.com
+```
+
+Per puntare all'istanza pubblica basta cambiare:
+
+```dotenv
+EXPO_PUBLIC_API_TARGET=public
+```
 
 Per trovare il tuo IP locale su macOS: `ipconfig getifaddr en0`
 
