@@ -34,14 +34,40 @@ Applicazione end-to-end per la compilazione del questionario FAQ DeepTrace:
 | Maven 3.8+ | solo per esecuzione senza Docker |
 | Node.js 20+ | solo per esecuzione senza Docker |
 
+Note pratiche:
+
+- esegui i comandi Docker dalla **root del progetto**, cioe' dalla cartella che contiene `docker-compose.yml`
+- su macOS puoi usare **Docker Desktop** oppure **Colima**
+- su Windows puoi usare **Docker Desktop** con PowerShell o CMD
+
 ---
 
 ## Avvio rapido (Docker Compose)
 
+Apri un terminale nella root del progetto:
+
+```bash
+cd /percorso/al/progetto/Test
+```
+
 **1. Copia e configura il file delle variabili d'ambiente:**
+
+macOS / Linux:
 
 ```bash
 cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Windows CMD:
+
+```bat
+copy .env.example .env
 ```
 
 Apri `.env` e compila almeno le variabili obbligatorie (vedi sezione Configurazione).
@@ -51,6 +77,10 @@ Apri `.env` e compila almeno le variabili obbligatorie (vedi sezione Configurazi
 ```bash
 docker compose up --build
 ```
+
+Questo comando va bene su macOS, Linux e Windows. Al primo avvio il backend viene compilato dentro il container, quindi il build puo' richiedere un po' di tempo.
+
+Nota: in locale `docker-compose.yml` usa `backend/Dockerfile.local`; `backend/Dockerfile` resta dedicato al package di deploy per Elastic Beanstalk.
 
 **3. Accedi all'app:**
 
@@ -147,6 +177,8 @@ npm install
 npm run dev
 ```
 
+Su Windows i comandi restano gli stessi se usi PowerShell o un terminale compatibile.
+
 **Test backend:**
 ```bash
 cd backend
@@ -183,3 +215,32 @@ Copertura minima attuale lato backend:
 ## Deploy AWS
 
 Per il deploy su AWS (Elastic Beanstalk + S3 + RDS + SES) consulta [`docs/aws-migration.md`](docs/aws-migration.md).
+
+### Backend su Elastic Beanstalk
+
+Per Beanstalk il backend usa `backend/Dockerfile` e un jar gia' compilato.
+
+Build del jar:
+
+```bash
+cd backend
+mvn clean package
+```
+
+Creazione dello zip di deploy:
+
+```bash
+cd backend
+bash package-beanstalk.sh
+```
+
+Il file generato e' `backend/backend-beanstalk.zip` e contiene:
+
+- `Dockerfile`
+- `target/faq-backend-0.0.1-SNAPSHOT.jar`
+
+In sintesi:
+
+- locale: `docker compose up --build`
+- Elastic Beanstalk: `mvn clean package` + `bash package-beanstalk.sh`
+

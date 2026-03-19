@@ -19,6 +19,7 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile.local
     container_name: faq-backend
     depends_on:
       postgres:

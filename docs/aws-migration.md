@@ -13,6 +13,14 @@
 4. Deploy backend first, then deploy frontend with `VITE_API_BASE_URL` set to backend public URL.
 5. Enable HTTPS and lock CORS to production domain.
 
+## Backend packaging note
+- In locale, il backend viene costruito da `docker-compose.yml` usando `backend/Dockerfile.local`.
+- Per Elastic Beanstalk resta valido `backend/Dockerfile`, che si aspetta un jar gia' compilato.
+- Flusso consigliato prima del deploy:
+  1. `cd backend && mvn clean package`
+  2. `cd backend && bash package-beanstalk.sh`
+  3. usa `backend-beanstalk.zip` per il deploy
+
 ## Minimal environment variables in AWS
 - `APP_DB_PROVIDER=rds`
 - `APP_DB_RDS_URL`
