@@ -55,7 +55,7 @@ story.append(Spacer(1, 0.5*cm))
 # Introduction
 story.append(Paragraph("Benvenuto", heading_style))
 story.append(Paragraph(
-    "Questa guida ti spiega come usare l'applicazione per compilare il questionario FAQ "
+    "Questa guida spiega come usare l'applicazione per compilare il questionario FAQ "
     "(Functional Activities Questionnaire). L'app è disponibile sia da web (browser) che da mobile (iOS/Android con Expo Go).",
     body_style
 ))
@@ -69,26 +69,26 @@ story.append(Spacer(1, 0.3*cm))
 # Section 1: Main interface
 story.append(Paragraph("Compilazione del Questionario", heading_style))
 story.append(Paragraph(
-    "<b>Passo 1: Inserisci i dati del paziente</b><br/>"
-    "Nella sezione principale, inserisci l'indirizzo email del paziente. "
-    "Questo campo è obbligatorio e riceverà il report PDF al termine della compilazione.",
+    "<b>Passo 1: Dati del paziente</b><br/>"
+    "Nella sezione principale, si inserisce l'indirizzo email del paziente. "
+    "Questo campo è obbligatorio e verrà usato come indirizzo per inviare il report PDF al termine della compilazione.",
     body_style
 ))
 story.append(Spacer(1, 0.2*cm))
 
 story.append(Paragraph(
-    "<b>Passo 2: Seleziona il compilatore</b><br/>"
-    "Scegli chi sta compilando il questionario tra le opzioni:<br/>"
+    "<b>Passo 2: Selezione del compilatore</b><br/>"
+    "Si seleziona chi sta compilando il questionario tra le opzioni:<br/>"
     "• <b>Paziente</b> - se è il paziente stesso<br/>"
     "• <b>Caregiver</b> - se è il caregiver/assistente<br/>"
-    "• <b>Altro</b> - se vuoi specificare un'altra figura (ad esempio medico, infermiere, etc.)",
+    "• <b>Altro</b> - se si vuole specificare un'altra figura (ad esempio medico, infermiere, etc.)",
     body_style
 ))
 story.append(Spacer(1, 0.2*cm))
 
 story.append(Paragraph(
-    "<b>Passo 3: Rispondi alle 10 domande</b><br/>"
-    "Compila tutte le domande usando la scala da 0 a 5, dove:<br/>"
+    "<b>Passo 3: Compilazione delle 10 domande</b><br/>"
+    "Si compilano tutte le domande usando la scala da 0 a 5, dove:<br/>"
     "• <b>0</b> = Normale, senza difficoltà<br/>"
     "• <b>1</b> = Normalmente, senza difficoltà, con qualche incertezza<br/>"
     "• <b>2</b> = Normalmente, con molta difficoltà<br/>"
@@ -100,8 +100,8 @@ story.append(Paragraph(
 story.append(Spacer(1, 0.2*cm))
 
 story.append(Paragraph(
-    "<b>Passo 4: Invia il questionario</b><br/>"
-    "Una volta compilate tutte le domande, clicca il pulsante <b>\"Invia questionario\"</b>. "
+    "<b>Passo 4: Invio del questionario</b><br/>"
+    "Una volta compilate tutte le domande, viene selezionato il pulsante <b>\"Invia questionario\"</b>. "
     "Il sistema calcolerà il punteggio totale e genererà un report PDF che sarà inviato all'email inserita.",
     body_style
 ))
@@ -121,7 +121,7 @@ story.append(Paragraph(
     body_style
 ))
 story.append(Paragraph(
-    "Se usi l'app da mobile, quindi, non devi imparare un flusso diverso: cambia soprattutto la navigazione, mentre i dati richiesti e il risultato finale restano gli stessi della versione web.",
+    "Nell'app mobile non occorre imparare un flusso diverso: cambia soprattutto la navigazione, mentre i dati richiesti e il risultato finale restano gli stessi della versione web.",
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
@@ -129,8 +129,8 @@ story.append(Spacer(1, 0.3*cm))
 # Section 2: History
 story.append(Paragraph("Visualizzazione dello Storico", heading_style))
 story.append(Paragraph(
-    "Nella sezione <b>\"Ultime sottomissioni\"</b> (o tab \"Storico\" su mobile), puoi consultare "
-    "l'elenco dei questionari compilati. Vedrai i seguenti dettagli per ogni submissione:<br/>"
+    "Nella sezione <b>\"Ultime sottomissioni\"</b> (o tab \"Storico\" su mobile), si può consultare "
+    "l'elenco dei questionari compilati. Sono visibili i seguenti dettagli per ogni submissione:<br/>"
     "• <b>ID</b> - numero identificativo della submissione<br/>"
     "• <b>Email</b> - email del paziente<br/>"
     "• <b>Compilatore</b> - chi ha compilato il questionario<br/>"
@@ -155,9 +155,9 @@ story.append(Spacer(1, 0.2*cm))
 story.append(Paragraph(
     "<b>Come funziona</b><br/>"
     "AWS SES richiede la verifica di ogni indirizzo email prima di poter inviare email. "
-    "Nel pannello Admin puoi gestire questa verifica:<br/><br/>"
-    "1. <b>Inserisci l'indirizzo email</b> che vuoi registrare<br/>"
-    "2. Clicca <b>\"Invia richiesta verifica\"</b><br/>"
+    "Nel pannello Admin si può gestire questa verifica:<br/><br/>"
+    "1. <b>Si inserisce l'indirizzo email</b> da registrare<br/>"
+    "2. Viene selezionato <b>\"Invia richiesta verifica\"</b><br/>"
     "3. AWS invierà una email di verifica all'indirizzo inserito<br/>"
     "4. L'utente riceverà un'email con un link di conferma<br/>"
     "5. Dopo aver cliccato il link, l'indirizzo sarà verificato e potrà ricevere email dal sistema",
@@ -169,6 +169,19 @@ story.append(Spacer(1, 0.3*cm))
 story.append(Paragraph(
     "<b>Nota importante:</b> Se il provider email è SMTP (es. Gmail), "
     "gli indirizzi email non richiedono verifica preliminare e il pannello Admin non sarà disponibile.",
+    body_style
+))
+
+story.append(Spacer(1, 0.4*cm))
+story.append(Paragraph("Accesso online", heading_style))
+story.append(Paragraph(
+    "L'applicazione è disponibile online al link:<br/>"
+    "<b>http://deeptrace-backend-env.eba-huphpcvn.eu-west-1.elasticbeanstalk.com</b>",
+    body_style
+))
+story.append(Paragraph(
+    "Per una visualizzazione alternativa dei dati presenti sul database RDS si può usare anche:<br/>"
+    "<b>http://deeptrace-backend-env.eba-huphpcvn.eu-west-1.elasticbeanstalk.com/api/submissions</b>",
     body_style
 ))
 
