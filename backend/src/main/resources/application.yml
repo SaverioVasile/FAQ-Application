@@ -6,7 +6,7 @@ spring:
   flyway:
     enabled: true
   mail:
-    host: ${SPRING_MAIL_HOST:email-smtp.eu-west-1.amazonaws.com}
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:}
     password: ${SPRING_MAIL_PASSWORD:}
@@ -14,6 +14,8 @@ spring:
       mail:
         smtp:
           auth: true
+          ssl:
+            trust: ${SPRING_MAIL_HOST:smtp.gmail.com}
           starttls:
             enabled: true
             required: true
