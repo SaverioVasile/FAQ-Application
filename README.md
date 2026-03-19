@@ -185,6 +185,46 @@ npm install
 npm run dev
 ```
 
+**Mobile (Expo Go):**
+
+1) Installa l'app **Expo Go** sul telefono (iOS/Android).
+
+2) Avvia backend e frontend (consigliato con Docker Compose) prima di testare mobile.
+
+3) Configura e avvia l'app mobile:
+
+```bash
+cd mobile
+npm install
+cp .env.example .env
+```
+
+Esempio `.env` per backend locale (telefono e PC sulla stessa rete Wi-Fi):
+
+```dotenv
+EXPO_PUBLIC_API_TARGET=local
+EXPO_PUBLIC_API_BASE_URL_LOCAL=http://<IP_DEL_TUO_PC>:8080
+EXPO_PUBLIC_API_BASE_URL_PUBLIC=https://your-backend.example.com
+EXPO_PUBLIC_SHOW_DEBUG_OVERLAY=true
+```
+
+Esempio `.env` per backend pubblico:
+
+```dotenv
+EXPO_PUBLIC_API_TARGET=public
+EXPO_PUBLIC_API_BASE_URL_PUBLIC=https://your-backend.example.com
+EXPO_PUBLIC_SHOW_DEBUG_OVERLAY=true
+```
+
+Avvio Expo:
+
+```bash
+cd mobile
+npm start -- --clear
+```
+
+Apri Expo Go sul telefono e scansiona il QR code mostrato nel terminale/browser.
+
 Su Windows i comandi restano gli stessi se usi PowerShell o un terminale compatibile.
 
 **Test backend:**
