@@ -21,7 +21,7 @@ class PdfReportServiceTest {
 
     @Test
     void shouldGenerateValidPdfContainingKeySubmissionData() throws Exception {
-        PdfReportService service = new PdfReportService(false, tempDir.toString());
+        PdfReportService service = new PdfReportService(false, tempDir.toString(), "Europe/Rome");
         Submission submission = buildSubmission();
 
         byte[] pdfBytes = service.generateReport(submission);
@@ -40,7 +40,7 @@ class PdfReportServiceTest {
 
     @Test
     void shouldSavePdfLocallyWhenEnabled() {
-        PdfReportService service = new PdfReportService(true, tempDir.toString());
+        PdfReportService service = new PdfReportService(true, tempDir.toString(), "Europe/Rome");
         byte[] pdfBytes = "fake-pdf-content".getBytes();
 
         service.saveReportIfEnabled("report-test.pdf", pdfBytes);
@@ -52,7 +52,7 @@ class PdfReportServiceTest {
 
     @Test
     void shouldNotSavePdfLocallyWhenDisabled() {
-        PdfReportService service = new PdfReportService(false, tempDir.toString());
+        PdfReportService service = new PdfReportService(false, tempDir.toString(), "Europe/Rome");
 
         service.saveReportIfEnabled("report-test.pdf", "fake-pdf-content".getBytes());
 

@@ -8,9 +8,11 @@ import com.deeptrace.faq.model.Submission;
 import com.deeptrace.faq.repository.SubmissionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -23,15 +25,18 @@ public class SubmissionService {
     private final ScoreService scoreService;
     private final PdfReportService pdfReportService;
     private final EmailService emailService;
+    private final ZoneId appZoneId;
 
     public SubmissionService(SubmissionRepository submissionRepository,
                              ScoreService scoreService,
                              PdfReportService pdfReportService,
-                             EmailService emailService) {
+                             EmailService emailService,
+                             @Value("${app.timezone:Europe/Rome}") String appTimezone) {
         this.submissionRepository = submissionRepository;
         this.scoreService = scoreService;
         this.pdfReportService = pdfReportService;
         this.emailService = emailService;
+        this.appZoneId = ZoneId.of(appTimezone);
     }
 
     @Transactional
@@ -58,7 +63,7 @@ public class SubmissionService {
         log.info("Questionario salvato su DB con id={} e punteggio={}", saved.getId(), saved.getTotalScore());
 
         byte[] reportBytes = pdfReportService.generateReport(saved);
-        String fileName = "report-faq-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(saved.getSubmittedAt().atZone(java.time.ZoneId.systemDefault())) + ".pdf";
+        String fileName = "report-faq-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(saved.getSubmittedAt().atZone(appZoneId)) + ".pdf";
         log.info("Report PDF generato per submission id={} con filename={}", saved.getId(), fileName);
         try {
             pdfReportService.saveReportIfEnabled(fileName, reportBytes);

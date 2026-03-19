@@ -160,6 +160,14 @@ APP_PDF_OUTPUT_DIR=./reports
 
 Con Docker Compose, il default container-side è `APP_PDF_OUTPUT_DIR=/tmp/faq-reports`.
 
+### Timezone applicativa
+
+Per evitare differenze tra orario host e container nella data riportata nel PDF:
+
+```dotenv
+APP_TIMEZONE=Europe/Rome
+```
+
 ---
 
 ## Esecuzione senza Docker (opzionale)

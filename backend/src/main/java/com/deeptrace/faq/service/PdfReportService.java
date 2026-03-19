@@ -8,6 +8,7 @@ import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.UnitValue;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,14 +39,37 @@ public class PdfReportService {
             "Spostarsi e viaggiare all'esterno del quartiere"
     };
 
-    private final boolean saveLocal;
-    private final Path outputDir;
+    @Value("${app.pdf.save-local:false}")
+    private boolean saveLocal;
 
-    public PdfReportService(@Value("${app.pdf.save-local:false}") boolean saveLocal,
-                            @Value("${app.pdf.output-dir:./reports}") String outputDir) {
+    @Value("${app.pdf.output-dir:./reports}")
+    private String outputDirValue;
+
+    @Value("${app.timezone:Europe/Rome}")
+    private String appTimezoneValue;
+
+    private Path outputDir;
+    private ZoneId appZoneId;
+
+    public PdfReportService() {
+        // Spring uses this constructor and applies @Value fields before @PostConstruct.
+    }
+
+    PdfReportService(boolean saveLocal, String outputDir, String appTimezone) {
+        applyConfig(saveLocal, outputDir, appTimezone);
+    }
+
+    @PostConstruct
+    void init() {
+        applyConfig(saveLocal, outputDirValue, appTimezoneValue);
+    }
+
+    private void applyConfig(boolean saveLocal, String outputDir, String appTimezone) {
         this.saveLocal = saveLocal;
         this.outputDir = Path.of(outputDir).normalize();
+        this.appZoneId = ZoneId.of(appTimezone);
     }
+
 
 
     public byte[] generateReport(Submission submission) {
@@ -62,7 +86,7 @@ public class PdfReportService {
                             ? " (" + submission.getRespondentOther() + ")"
                             : "")));
             document.add(new Paragraph("Data compilazione: " + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                    .withZone(ZoneId.systemDefault())
+                    .withZone(appZoneId)
                     .format(submission.getSubmittedAt())));
             document.add(new Paragraph("Punteggio totale: " + submission.getTotalScore()).setBold());
 
