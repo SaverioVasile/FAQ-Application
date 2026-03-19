@@ -206,6 +206,7 @@ Copertura minima attuale lato backend:
 |---|---|---|
 | POST | `/api/submissions` | Invia questionario |
 | GET | `/api/submissions` | Lista sottomissioni |
+| GET | `/api/admin/mail-config` | Stato provider mail per UI admin |
 | POST | `/api/admin/ses-verify-email` | Richiedi verifica email SES |
 
 **Payload POST `/api/submissions`:**

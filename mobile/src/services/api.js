@@ -54,3 +54,8 @@ export async function requestSesEmailVerification(email) {
   return data;
 }
 
+export async function fetchMailConfig() {
+  const { data } = await api.get('/api/admin/mail-config');
+  return data;
+}
+

@@ -1,7 +1,12 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { faqQuestions, scoreLegend } from './constants/questions'
-import { fetchSubmissions, submitQuestionnaire, requestSesEmailVerification } from './services/api'
+import {
+  fetchSubmissions,
+  submitQuestionnaire,
+  requestSesEmailVerification,
+  fetchMailConfig
+} from './services/api'
 
 const form = reactive({
   respondentType: 'CAREGIVER',
@@ -20,6 +25,7 @@ const adminEmail = ref('')
 const adminMessage = ref('')
 const adminError = ref('')
 const isAdminSubmitting = ref(false)
+const sesAdminAvailable = ref(false)
 
 const totalPreview = computed(() =>
   form.answers.reduce((acc, value) => acc + (value === '' ? 0 : Number(value)), 0)
@@ -35,11 +41,23 @@ const canSubmit = computed(() => {
   return true
 })
 
+const showSesAdmin = computed(() => sesAdminAvailable.value)
+
 async function loadSubmissions() {
   try {
     submissions.value = await fetchSubmissions()
   } catch {
     submissions.value = []
+  }
+}
+
+async function loadMailConfig() {
+  try {
+    const config = await fetchMailConfig()
+    sesAdminAvailable.value = Boolean(config?.sesAdminAvailable)
+  } catch {
+    // Fallback sicuro: nasconde la sezione admin SES se il check config fallisce.
+    sesAdminAvailable.value = false
   }
 }
 
@@ -90,7 +108,9 @@ async function onAdminRequestVerification() {
   }
 }
 
-onMounted(loadSubmissions)
+onMounted(async () => {
+  await Promise.all([loadSubmissions(), loadMailConfig()])
+})
 </script>
 
 <template>
@@ -222,7 +242,7 @@ onMounted(loadSubmissions)
         </div>
       </section>
 
-      <section class="rounded-xl bg-white p-6 shadow-sm">
+      <section v-if="showSesAdmin" class="rounded-xl bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-slate-900">Admin - Verifica indirizzi email SES</h2>
         <p class="mt-2 text-sm text-slate-600">
           Inserisci un indirizzo email per cui inviare la richiesta di verifica SES. L'utente dovrà aprire l'email

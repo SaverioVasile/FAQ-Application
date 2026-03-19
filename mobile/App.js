@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
@@ -9,15 +9,30 @@ import AdminScreen from './src/screens/AdminScreen';
 import DebugOverlay from './src/components/DebugOverlay';
 import { API_BASE_URL, API_TARGET } from './src/config';
 import { addDebugLog } from './src/services/debugLog';
+import { fetchMailConfig } from './src/services/api';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const [sesAdminAvailable, setSesAdminAvailable] = useState(false);
+
   useEffect(() => {
-    addDebugLog('API config selected', {
-      target: API_TARGET,
-      url: API_BASE_URL,
-    });
+    addDebugLog('API config selected', { target: API_TARGET, url: API_BASE_URL });
+
+    fetchMailConfig()
+      .then((config) => {
+        const available = Boolean(config?.sesAdminAvailable);
+        setSesAdminAvailable(available);
+        addDebugLog('Mail config loaded', {
+          provider: config?.mailProvider,
+          enabled: config?.mailEnabled,
+          sesAdminAvailable: available,
+        });
+      })
+      .catch((err) => {
+        addDebugLog('Mail config error', { message: err?.message || 'unknown' });
+        setSesAdminAvailable(false);
+      });
   }, []);
 
   return (
@@ -25,7 +40,7 @@ export default function App() {
       <StatusBar style="auto" />
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color }) => {
+          tabBarIcon: ({ focused }) => {
             const icons = {
               Questionario: focused ? '📋' : '📄',
               Storico: focused ? '📊' : '📉',
@@ -51,11 +66,13 @@ export default function App() {
           component={SubmissionsScreen}
           options={{ title: 'Storico' }}
         />
-        <Tab.Screen
-          name="Admin"
-          component={AdminScreen}
-          options={{ title: 'Admin' }}
-        />
+        {sesAdminAvailable && (
+          <Tab.Screen
+            name="Admin"
+            component={AdminScreen}
+            options={{ title: 'Admin' }}
+          />
+        )}
       </Tab.Navigator>
       <DebugOverlay />
     </NavigationContainer>
