@@ -49,6 +49,19 @@ export async function fetchSubmissions() {
   return data;
 }
 
+export async function fetchSesVerificationStatus(email) {
+  addDebugLog('SES status request', { email });
+  const { data } = await api.get('/api/admin/ses-verification-status', {
+    params: { email },
+  });
+  addDebugLog('SES status response', {
+    email,
+    status: data?.status,
+    rawStatus: data?.rawStatus,
+  });
+  return data;
+}
+
 export async function requestSesEmailVerification(email) {
   addDebugLog('SES verify request', { email });
   const { data } = await api.post('/api/admin/ses-verify-email', { email });
@@ -70,5 +83,9 @@ export async function resendSubmissionEmail(submissionId) {
 export async function fetchMailConfig() {
   const { data } = await api.get('/api/admin/mail-config');
   return data;
+}
+
+export function extractApiMessage(err, fallback) {
+  return err?.response?.data?.message || fallback;
 }
 

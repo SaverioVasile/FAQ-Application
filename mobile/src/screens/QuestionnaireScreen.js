@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { faqQuestions, scoreLegend } from '../constants/questions';
-import { submitQuestionnaire } from '../services/api';
+import { submitQuestionnaire, extractApiMessage } from '../services/api';
+import { addDebugLog } from '../services/debugLog';
 
 const RESPONDENT_TYPES = [
   { value: 'PAZIENTE', label: 'Paziente' },
@@ -20,7 +21,12 @@ const RESPONDENT_TYPES = [
   { value: 'ALTRO', label: 'Altro' },
 ];
 
-export default function QuestionnaireScreen() {
+function isSesUnverifiedMessage(value) {
+  const normalized = String(value || '').toLowerCase();
+  return normalized.includes('not verified') || normalized.includes('indirizzo email non verificato');
+}
+
+export default function QuestionnaireScreen({ navigation, sesAdminAvailable, setPendingSubmission, setAdminDraftEmail }) {
   const [patientEmail, setPatientEmail] = useState('');
   const [respondentType, setRespondentType] = useState('CAREGIVER');
   const [respondentOther, setRespondentOther] = useState('');
@@ -74,7 +80,20 @@ export default function QuestionnaireScreen() {
       const data = await submitQuestionnaire(payload);
       setResult(data);
       if (data?.emailSent === false) {
-        setWarning(data?.message || 'Questionario salvato, ma invio email non completato.');
+        const warningMessage = data?.message || 'Questionario salvato, ma invio email non completato.';
+        setWarning(warningMessage);
+
+        if (sesAdminAvailable && isSesUnverifiedMessage(warningMessage)) {
+          setPendingSubmission({ id: data?.submissionId || null, email: payload.patientEmail });
+          setAdminDraftEmail(payload.patientEmail);
+          addDebugLog('Questionnaire requires SES verification', {
+            submissionId: data?.submissionId,
+            email: payload.patientEmail,
+          });
+          navigation.navigate('Admin');
+        }
+      } else {
+        setPendingSubmission(null);
       }
       // reset form
       setPatientEmail('');
@@ -82,7 +101,15 @@ export default function QuestionnaireScreen() {
       setRespondentOther('');
       setAnswers(Array(10).fill(null));
     } catch (err) {
-      setError(err?.response?.data?.message || 'Errore durante la sottomissione.');
+      const message = extractApiMessage(err, 'Errore durante la sottomissione.');
+      setError(message);
+
+      if (sesAdminAvailable && isSesUnverifiedMessage(message)) {
+        setPendingSubmission({ id: null, email: patientEmail });
+        setAdminDraftEmail(patientEmail);
+        addDebugLog('Questionnaire submit error requires SES verification', { email: patientEmail, message });
+        navigation.navigate('Admin');
+      }
     } finally {
       setIsSubmitting(false);
     }

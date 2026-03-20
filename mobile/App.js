@@ -15,6 +15,8 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [sesAdminAvailable, setSesAdminAvailable] = useState(false);
+  const [pendingSubmission, setPendingSubmission] = useState(null);
+  const [adminDraftEmail, setAdminDraftEmail] = useState('');
 
   useEffect(() => {
     addDebugLog('API config selected', { target: API_TARGET, url: API_BASE_URL });
@@ -58,21 +60,42 @@ export default function App() {
       >
         <Tab.Screen
           name="Questionario"
-          component={QuestionnaireScreen}
+          children={(props) => (
+            <QuestionnaireScreen
+              {...props}
+              sesAdminAvailable={sesAdminAvailable}
+              setPendingSubmission={setPendingSubmission}
+              setAdminDraftEmail={setAdminDraftEmail}
+            />
+          )}
           options={{ title: 'Questionario FAQ' }}
         />
         <Tab.Screen
           name="Storico"
-          component={SubmissionsScreen}
+          children={(props) => (
+            <SubmissionsScreen
+              {...props}
+              sesAdminAvailable={sesAdminAvailable}
+              setPendingSubmission={setPendingSubmission}
+              setAdminDraftEmail={setAdminDraftEmail}
+            />
+          )}
           options={{ title: 'Storico' }}
         />
-        {sesAdminAvailable && (
-          <Tab.Screen
-            name="Admin"
-            component={AdminScreen}
-            options={{ title: 'Admin' }}
-          />
-        )}
+        <Tab.Screen
+          name="Admin"
+          children={(props) => (
+            <AdminScreen
+              {...props}
+              sesAdminAvailable={sesAdminAvailable}
+              pendingSubmission={pendingSubmission}
+              setPendingSubmission={setPendingSubmission}
+              adminDraftEmail={adminDraftEmail}
+              setAdminDraftEmail={setAdminDraftEmail}
+            />
+          )}
+          options={{ title: 'Admin' }}
+        />
       </Tab.Navigator>
       <DebugOverlay />
     </NavigationContainer>

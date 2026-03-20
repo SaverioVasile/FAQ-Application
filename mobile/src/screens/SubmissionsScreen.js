@@ -10,10 +10,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { fetchSubmissions, resendSubmissionEmail } from '../services/api';
+import {
+  fetchSubmissions,
+  resendSubmissionEmail,
+  fetchSesVerificationStatus,
+  extractApiMessage,
+} from '../services/api';
+import { addDebugLog } from '../services/debugLog';
 
-export default function SubmissionsScreen() {
+export default function SubmissionsScreen({ navigation, sesAdminAvailable, setPendingSubmission, setAdminDraftEmail }) {
   const [submissions, setSubmissions] = useState([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -21,6 +28,9 @@ export default function SubmissionsScreen() {
   const [actionWarning, setActionWarning] = useState(false);
   const [actionError, setActionError] = useState('');
   const [resendingId, setResendingId] = useState(null);
+  const ITEMS_PER_PAGE = 5;
+  const totalPages = Math.max(1, Math.ceil(submissions.length / ITEMS_PER_PAGE));
+  const pagedSubmissions = submissions.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -30,6 +40,10 @@ export default function SubmissionsScreen() {
     try {
       const data = await fetchSubmissions();
       setSubmissions(data);
+      setPage((prev) => {
+        const maxPage = Math.max(1, Math.ceil(data.length / ITEMS_PER_PAGE));
+        return Math.min(prev, maxPage);
+      });
     } catch {
       setError('Impossibile caricare le sottomissioni. Controlla la connessione al backend.');
     } finally {
@@ -45,18 +59,56 @@ export default function SubmissionsScreen() {
     }, [loadData]),
   );
 
-  async function handleResendEmail(submissionId) {
+  async function handleResendEmail(item) {
+    const submissionId = item.id;
+    const email = item.patientEmail;
+
     setResendingId(submissionId);
     setActionMessage('');
     setActionWarning(false);
     setActionError('');
+
+    if (sesAdminAvailable) {
+      try {
+        const status = await fetchSesVerificationStatus(email);
+        if (status?.status !== 'success') {
+          setPendingSubmission({ id: submissionId, email });
+          setAdminDraftEmail(email);
+          setActionWarning(true);
+          setActionMessage(
+            status?.status === 'pending'
+              ? 'Verifica SES ancora pendente per questo indirizzo. Completare la verifica e riprovare.'
+              : 'Indirizzo non verificato su SES. Aprire la tab Admin per gestire la verifica.',
+          );
+          addDebugLog('Resend blocked by SES status', { submissionId, email, status: status?.status });
+          navigation.navigate('Admin');
+          setResendingId(null);
+          return;
+        }
+      } catch (err) {
+        const message = extractApiMessage(err, 'Impossibile verificare lo stato SES.');
+        setActionError(message);
+        addDebugLog('SES status check failed before resend', { submissionId, email, message });
+        setResendingId(null);
+        return;
+      }
+    }
+
     try {
       const data = await resendSubmissionEmail(submissionId);
       setActionMessage(data?.message || 'Reinvio completato.');
       setActionWarning(data?.emailSent === false);
+      if (data?.emailSent === false && sesAdminAvailable) {
+        setPendingSubmission({ id: submissionId, email });
+        setAdminDraftEmail(email);
+      } else {
+        setPendingSubmission(null);
+      }
       await loadData();
     } catch (err) {
-      setActionError(err?.response?.data?.message || 'Errore durante il reinvio della mail.');
+      const message = extractApiMessage(err, 'Errore durante il reinvio della mail.');
+      setActionError(message);
+      addDebugLog('Resend failed', { submissionId, email, message });
     } finally {
       setResendingId(null);
     }
@@ -82,7 +134,7 @@ export default function SubmissionsScreen() {
         </View>
         <TouchableOpacity
           style={[styles.resendButton, resendingId === item.id && styles.resendButtonDisabled]}
-          onPress={() => handleResendEmail(item.id)}
+          onPress={() => handleResendEmail(item)}
           disabled={resendingId === item.id}
         >
           <Text style={styles.resendButtonText}>
@@ -107,7 +159,7 @@ export default function SubmissionsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <FlatList
-        data={submissions}
+        data={pagedSubmissions}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
@@ -139,6 +191,29 @@ export default function SubmissionsScreen() {
               {error || 'Nessuna sottomissione trovata.'}
             </Text>
           </View>
+        }
+        ListFooterComponent={
+          submissions.length > ITEMS_PER_PAGE ? (
+            <View style={styles.paginationBox}>
+              <Text style={styles.paginationText}>Pagina {page} di {totalPages}</Text>
+              <View style={styles.paginationActions}>
+                <TouchableOpacity
+                  style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
+                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <Text style={[styles.pageButtonText, page === 1 && styles.pageButtonTextDisabled]}>Precedente</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pageButton, page === totalPages && styles.pageButtonDisabled]}
+                  onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <Text style={[styles.pageButtonText, page === totalPages && styles.pageButtonTextDisabled]}>Successiva</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null
         }
       />
     </SafeAreaView>
@@ -224,6 +299,41 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: { fontSize: 13, color: '#b91c1c' },
+  paginationBox: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  paginationText: {
+    fontSize: 12,
+    color: SLATE_600,
+    marginBottom: 8,
+  },
+  paginationActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pageButton: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#fff',
+  },
+  pageButtonDisabled: {
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  pageButtonText: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '700',
+  },
+  pageButtonTextDisabled: {
+    color: '#94a3b8',
+  },
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { color: SLATE_600, fontSize: 14, textAlign: 'center' },
 });

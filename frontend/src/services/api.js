@@ -24,6 +24,13 @@ export async function requestSesEmailVerification(email) {
   return data
 }
 
+export async function fetchSesVerificationStatus(email) {
+  const { data } = await api.get('/api/admin/ses-verification-status', {
+    params: { email }
+  })
+  return data
+}
+
 export async function fetchMailConfig() {
   const { data } = await api.get('/api/admin/mail-config')
   return data

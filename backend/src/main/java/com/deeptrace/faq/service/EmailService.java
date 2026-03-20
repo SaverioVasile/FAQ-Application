@@ -1,10 +1,12 @@
 package com.deeptrace.faq.service;
 
+import com.deeptrace.faq.dto.SesVerificationStatusResponse;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,9 +19,12 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ses.SesClient;
 import software.amazon.awssdk.services.ses.SesClientBuilder;
+import software.amazon.awssdk.services.ses.model.GetIdentityVerificationAttributesRequest;
+import software.amazon.awssdk.services.ses.model.IdentityVerificationAttributes;
 import software.amazon.awssdk.services.ses.model.RawMessage;
 import software.amazon.awssdk.services.ses.model.SendRawEmailRequest;
 import software.amazon.awssdk.services.ses.model.SendRawEmailResponse;
+import software.amazon.awssdk.services.ses.model.SesException;
 import software.amazon.awssdk.services.ses.model.VerifyEmailIdentityRequest;
 
 import java.io.ByteArrayOutputStream;
@@ -42,6 +47,7 @@ public class EmailService {
     private final String provider;
     private final SesClient sesClient;
 
+    @Autowired
     public EmailService(JavaMailSender mailSender,
                         @Value("${app.mail.enabled:false}") boolean mailEnabled,
                         @Value("${app.mail.from:no-reply@example.com}") String fromAddress,
@@ -49,12 +55,23 @@ public class EmailService {
                         @Value("${app.mail.ses.region:eu-west-1}") String sesRegion,
                         @Value("${app.mail.ses.access-key:}") String sesAccessKey,
                         @Value("${app.mail.ses.secret-key:}") String sesSecretKey) {
+        this(mailSender, mailEnabled, fromAddress, provider, sesRegion, sesAccessKey, sesSecretKey, null);
+    }
+
+    EmailService(JavaMailSender mailSender,
+                 boolean mailEnabled,
+                 String fromAddress,
+                 String provider,
+                 String sesRegion,
+                 String sesAccessKey,
+                 String sesSecretKey,
+                 SesClient sesClientOverride) {
         this.mailSender = mailSender;
         this.mailEnabled = mailEnabled;
         this.fromAddress = fromAddress;
         this.provider = normalizeProvider(provider);
         this.sesClient = PROVIDER_SES.equals(this.provider)
-                ? buildSesClient(sesRegion, sesAccessKey, sesSecretKey)
+                ? (sesClientOverride != null ? sesClientOverride : buildSesClient(sesRegion, sesAccessKey, sesSecretKey))
                 : null;
 
         log.info("EmailService initialized - enabled={}, provider={}, from={}, sesRegion={}, hasCustomSesCredentials={}",
@@ -147,16 +164,90 @@ public class EmailService {
     }
 
     public void requestSesEmailVerification(String email) {
-        if (!mailEnabled || !PROVIDER_SES.equals(provider)) {
-            log.warn("Richiesta verifica SES ignorata per email={} perché provider={} o mailEnabled={}", email, provider, mailEnabled);
-            throw new IllegalStateException("Verifica email disponibile solo quando il provider SES è attivo (app.mail.enabled=true, app.mail.provider=ses).");
-        }
+        ensureSesVerificationAvailable(email);
 
         log.info("Richiesta verifica email SES per email={}", email);
         VerifyEmailIdentityRequest request = VerifyEmailIdentityRequest.builder()
                 .emailAddress(Objects.requireNonNull(email, "email must not be null"))
                 .build();
-        requireSesClient().verifyEmailIdentity(request);
+        try {
+            requireSesClient().verifyEmailIdentity(request);
+        } catch (SesException ex) {
+            int statusCode = ex.statusCode();
+            log.error("Errore SES durante verifyEmailIdentity per email={} (status={}, requestId={}): {}",
+                    email, statusCode, ex.requestId(), ex.awsErrorDetails() != null ? ex.awsErrorDetails().errorMessage() : ex.getMessage());
+            throw new IllegalStateException(mapSesVerificationError(statusCode, ex));
+        }
+    }
+
+    public SesVerificationStatusResponse getSesEmailVerificationStatus(String email) {
+        ensureSesVerificationAvailable(email);
+
+        try {
+            var response = requireSesClient().getIdentityVerificationAttributes(
+                    GetIdentityVerificationAttributesRequest.builder()
+                            .identities(email)
+                            .build()
+            );
+
+            IdentityVerificationAttributes attributes = response.verificationAttributes().get(email);
+            if (attributes == null || attributes.verificationStatus() == null) {
+                log.info("Nessuno stato verifica SES trovato per email={}", email);
+                return new SesVerificationStatusResponse(email, "not-requested", "NOT_REQUESTED", false, false);
+            }
+
+            String rawStatus = attributes.verificationStatusAsString();
+            String normalizedStatus = normalizeSesVerificationStatus(rawStatus);
+            boolean verified = "success".equals(normalizedStatus);
+            boolean pending = "pending".equals(normalizedStatus);
+
+            log.info("Stato verifica SES per email={}: rawStatus={}, normalizedStatus={}", email, rawStatus, normalizedStatus);
+            return new SesVerificationStatusResponse(email, normalizedStatus, rawStatus, verified, pending);
+        } catch (SesException ex) {
+            int statusCode = ex.statusCode();
+            log.error("Errore SES durante getIdentityVerificationAttributes per email={} (status={}, requestId={}): {}",
+                    email, statusCode, ex.requestId(), ex.awsErrorDetails() != null ? ex.awsErrorDetails().errorMessage() : ex.getMessage());
+            throw new IllegalStateException(mapSesStatusError(statusCode));
+        }
+    }
+
+    private void ensureSesVerificationAvailable(String email) {
+        if (!mailEnabled || !PROVIDER_SES.equals(provider)) {
+            log.warn("Operazione verifica SES ignorata per email={} perché provider={} o mailEnabled={}", email, provider, mailEnabled);
+            throw new IllegalStateException("Verifica email disponibile solo quando il provider SES è attivo (app.mail.enabled=true, app.mail.provider=ses).");
+        }
+    }
+
+    private String normalizeSesVerificationStatus(String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank()) {
+            return "unknown";
+        }
+
+        return switch (rawStatus.trim().toUpperCase(Locale.ROOT)) {
+            case "SUCCESS" -> "success";
+            case "PENDING" -> "pending";
+            case "FAILED" -> "failed";
+            case "TEMPORARY_FAILURE" -> "temporary-failure";
+            default -> "unknown";
+        };
+    }
+
+    private String mapSesVerificationError(int statusCode, SesException ex) {
+        String raw = ex != null && ex.getMessage() != null ? ex.getMessage().toLowerCase(Locale.ROOT) : "";
+        if (raw.contains("not verified") || raw.contains("email address is not verified")) {
+            return "Indirizzo email non verificato";
+        }
+        if (statusCode == 403) {
+            return "Permessi insufficienti per richiedere la verifica email su SES";
+        }
+        return "Errore durante la richiesta di verifica email";
+    }
+
+    private String mapSesStatusError(int statusCode) {
+        if (statusCode == 403) {
+            return "Permessi insufficienti per leggere lo stato di verifica email su SES";
+        }
+        return "Errore durante il recupero dello stato di verifica email";
     }
 
     private String normalizeProvider(String provider) {

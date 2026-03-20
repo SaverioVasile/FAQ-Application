@@ -1,5 +1,6 @@
 package com.deeptrace.faq.controller;
 
+import com.deeptrace.faq.dto.SesVerificationStatusResponse;
 import com.deeptrace.faq.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
@@ -60,6 +62,12 @@ public class AdminController {
                 "message", "Richiesta di verifica inviata. Controlla la casella email e clicca sul link di conferma.",
                 "email", email
         ));
+    }
+
+    @GetMapping("/ses-verification-status")
+    public ResponseEntity<SesVerificationStatusResponse> getSesVerificationStatus(@RequestParam String email) {
+        log.info("SES verification status requested for email={}", email);
+        return ResponseEntity.ok(emailService.getSesEmailVerificationStatus(email));
     }
 
     private String normalizeProvider(String provider) {

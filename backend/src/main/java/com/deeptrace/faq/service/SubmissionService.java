@@ -83,13 +83,14 @@ public class SubmissionService {
                 message = "Questionario salvato. Invio email disabilitato localmente (app.mail.enabled=false).";
                 log.info("Questionario id={} salvato. Invio email disabilitato.", saved.getId());
             } else {
+                message = "Questionario inviato correttamente.";
                 log.info("Questionario id={} salvato e email inviata con successo.", saved.getId());
             }
         } catch (Exception ex) {
             log.error("Errore durante l'invio email per submission id={}", saved.getId(), ex);
             saved.setEmailSent(false);
             saved.setEmailError(ex.getMessage());
-            message = "Questionario salvato, ma invio email fallito: " + ex.getMessage();
+            message = "Questionario salvato, ma invio email fallito: " + toUserFriendlyEmailError(ex);
         }
 
         submissionRepository.save(saved);
@@ -127,7 +128,7 @@ public class SubmissionService {
             log.error("Errore durante reinvio email per submission id={}", submissionId, ex);
             submission.setEmailSent(false);
             submission.setEmailError(ex.getMessage());
-            message = "Reinvio fallito: " + ex.getMessage();
+            message = "Reinvio fallito: " + toUserFriendlyEmailError(ex);
         }
 
         submissionRepository.save(submission);
@@ -159,6 +160,14 @@ public class SubmissionService {
     private String buildReportFileName(Submission submission) {
         return "report-faq-" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
                 .format(submission.getSubmittedAt().atZone(appZoneId)) + ".pdf";
+    }
+
+    private String toUserFriendlyEmailError(Exception ex) {
+        String raw = ex != null && ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        if (raw.contains("email address is not verified") || raw.contains("not verified")) {
+            return "Indirizzo email non verificato";
+        }
+        return "Errore durante l'invio email";
     }
 }
 

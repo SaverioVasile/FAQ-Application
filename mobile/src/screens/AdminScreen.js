@@ -11,17 +11,67 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { requestSesEmailVerification } from '../services/api';
+import {
+  requestSesEmailVerification,
+  fetchSesVerificationStatus,
+  resendSubmissionEmail,
+  extractApiMessage,
+} from '../services/api';
 import { addDebugLog } from '../services/debugLog';
 
-export default function AdminScreen() {
+export default function AdminScreen({ sesAdminAvailable, pendingSubmission, setPendingSubmission, adminDraftEmail, setAdminDraftEmail }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('');
+  const [verificationRawStatus, setVerificationRawStatus] = useState('');
+
+  React.useEffect(() => {
+    if (adminDraftEmail) {
+      setEmail(adminDraftEmail);
+      setAdminDraftEmail('');
+      setMessage('');
+      setError('');
+    }
+  }, [adminDraftEmail, setAdminDraftEmail]);
 
   function isValidEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function resetStatus() {
+    setVerificationStatus('');
+    setVerificationRawStatus('');
+  }
+
+  async function refreshStatus() {
+    if (!email || !isValidEmail(email)) {
+      setError('Inserisci un indirizzo email valido.');
+      return;
+    }
+
+    setIsCheckingStatus(true);
+    setError('');
+    setMessage('');
+    try {
+      const status = await fetchSesVerificationStatus(email);
+      setVerificationStatus(status?.status || 'unknown');
+      setVerificationRawStatus(status?.rawStatus || 'UNKNOWN');
+      addDebugLog('Admin status refresh', { email, status: status?.status, rawStatus: status?.rawStatus });
+    } catch (err) {
+      const apiMessage = extractApiMessage(err, 'Errore durante il recupero dello stato verifica.');
+      setError(apiMessage);
+      addDebugLog('Admin status refresh error', {
+        email,
+        status: err?.response?.status || 'NO_RESPONSE',
+        message: apiMessage,
+      });
+    } finally {
+      setIsCheckingStatus(false);
+    }
   }
 
   async function handleVerify() {
@@ -30,9 +80,10 @@ export default function AdminScreen() {
       return;
     }
 
-    setLoading(true);
+    setIsVerifying(true);
     setMessage('');
     setError('');
+    resetStatus();
 
     try {
       addDebugLog('Admin verify submit', { email });
@@ -42,20 +93,68 @@ export default function AdminScreen() {
           'Richiesta di verifica inviata. Controlla la casella email del destinatario.',
       );
       addDebugLog('Admin verify success', { email, message: res?.message || '' });
-      setEmail('');
+      await refreshStatus();
     } catch (err) {
+      const apiMessage = extractApiMessage(err, 'Errore durante la richiesta di verifica.');
       addDebugLog('Admin verify error', {
         email,
         status: err?.response?.status || 'NO_RESPONSE',
-        message: err?.response?.data?.message || err?.message || 'Unknown error',
+        message: apiMessage,
       });
-      setError(
-        err?.response?.data?.message || 'Errore durante la richiesta di verifica.',
-      );
+      setError(apiMessage);
     } finally {
-      setLoading(false);
+      setIsVerifying(false);
     }
   }
+
+  async function handleResendPending() {
+    if (!pendingSubmission?.id) {
+      return;
+    }
+
+    setIsResending(true);
+    setError('');
+    setMessage('');
+    try {
+      const response = await resendSubmissionEmail(pendingSubmission.id);
+      setMessage(response?.message || 'Reinvio completato.');
+      if (response?.emailSent) {
+        setPendingSubmission(null);
+      }
+      addDebugLog('Admin pending resend', {
+        submissionId: pendingSubmission.id,
+        emailSent: response?.emailSent,
+      });
+    } catch (err) {
+      const apiMessage = extractApiMessage(err, 'Errore durante il reinvio del report.');
+      setError(apiMessage);
+      addDebugLog('Admin pending resend error', {
+        submissionId: pendingSubmission.id,
+        message: apiMessage,
+      });
+    } finally {
+      setIsResending(false);
+    }
+  }
+
+  const canResendPending = verificationStatus === 'success' && Boolean(pendingSubmission?.id);
+
+  const statusMessage = React.useMemo(() => {
+    switch (verificationStatus) {
+      case 'success':
+        return 'Indirizzo verificato su SES.';
+      case 'pending':
+        return 'Verifica SES pendente. Attendere il click sul link ricevuto via email.';
+      case 'not-requested':
+        return 'Nessuna richiesta di verifica inviata per questo indirizzo.';
+      case 'failed':
+        return 'Verifica SES fallita. Inviare una nuova richiesta.';
+      case 'temporary-failure':
+        return 'Verifica SES temporaneamente fallita. Riprovare piu tardi.';
+      default:
+        return '';
+    }
+  }, [verificationStatus]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -64,6 +163,15 @@ export default function AdminScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {!sesAdminAvailable ? (
+            <View style={styles.card}>
+              <Text style={styles.title}>Admin — Verifica indirizzi email SES</Text>
+              <Text style={styles.description}>
+                Funzionalita non disponibile con la configurazione mail corrente. Impostare SES come provider e attivare l'invio mail.
+              </Text>
+            </View>
+          ) : (
+            <>
           <View style={styles.card}>
             <Text style={styles.title}>Admin — Verifica indirizzi email SES</Text>
             <Text style={styles.description}>
@@ -77,8 +185,10 @@ export default function AdminScreen() {
               value={email}
               onChangeText={(val) => {
                 setEmail(val);
+                setAdminDraftEmail(val);
                 setError('');
                 setMessage('');
+                resetStatus();
               }}
               placeholder="email-da-verificare@example.com"
               placeholderTextColor="#94a3b8"
@@ -88,17 +198,57 @@ export default function AdminScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.button, (loading || !email) && styles.buttonDisabled]}
+              style={[styles.button, (isVerifying || !email) && styles.buttonDisabled]}
               onPress={handleVerify}
-              disabled={loading || !email}
+              disabled={isVerifying || !email}
               activeOpacity={0.8}
             >
-              {loading ? (
+              {isVerifying ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.buttonText}>Invia richiesta verifica</Text>
               )}
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.secondaryButton, (isCheckingStatus || !email) && styles.buttonDisabled]}
+              onPress={refreshStatus}
+              disabled={isCheckingStatus || !email}
+              activeOpacity={0.8}
+            >
+              {isCheckingStatus ? (
+                <ActivityIndicator color="#334155" size="small" />
+              ) : (
+                <Text style={styles.secondaryButtonText}>Aggiorna stato verifica</Text>
+              )}
+            </TouchableOpacity>
+
+            {statusMessage ? (
+              <View style={styles.statusBox}>
+                <Text style={styles.statusText}>{statusMessage}</Text>
+                {verificationRawStatus ? <Text style={styles.statusRaw}>Stato SES: {verificationRawStatus}</Text> : null}
+              </View>
+            ) : null}
+
+            {pendingSubmission?.id ? (
+              <View style={styles.pendingBox}>
+                <Text style={styles.pendingText}>
+                  E presente un questionario gia compilato per {pendingSubmission.email}.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.button, (!canResendPending || isResending) && styles.buttonDisabled]}
+                  onPress={handleResendPending}
+                  disabled={!canResendPending || isResending}
+                  activeOpacity={0.8}
+                >
+                  {isResending ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.buttonText}>Invia report gia compilato</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             {message ? (
               <View style={styles.alertSuccess}>
@@ -122,6 +272,8 @@ export default function AdminScreen() {
               4. Solo dopo la verifica l'indirizzo potrà ricevere email dal sistema.
             </Text>
           </View>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -196,6 +348,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  secondaryButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 42,
+    backgroundColor: '#f8fafc',
+  },
+  secondaryButtonText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  statusBox: {
+    marginTop: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 12,
+  },
+  statusText: {
+    fontSize: 13,
+    color: '#334155',
+  },
+  statusRaw: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  pendingBox: {
+    marginTop: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 12,
+  },
+  pendingText: {
+    fontSize: 13,
+    color: '#334155',
+    marginBottom: 10,
   },
 
   alertSuccess: {
