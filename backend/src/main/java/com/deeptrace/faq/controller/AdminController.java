@@ -5,6 +5,7 @@ import com.deeptrace.faq.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -67,7 +68,9 @@ public class AdminController {
     @GetMapping("/ses-verification-status")
     public ResponseEntity<SesVerificationStatusResponse> getSesVerificationStatus(@RequestParam String email) {
         log.info("SES verification status requested for email={}", email);
-        return ResponseEntity.ok(emailService.getSesEmailVerificationStatus(email));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(emailService.getSesEmailVerificationStatus(email));
     }
 
     private String normalizeProvider(String provider) {

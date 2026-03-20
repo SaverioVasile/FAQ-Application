@@ -26,7 +26,7 @@ export async function requestSesEmailVerification(email) {
 
 export async function fetchSesVerificationStatus(email) {
   const { data } = await api.get('/api/admin/ses-verification-status', {
-    params: { email }
+    params: { email, _t: Date.now() }
   })
   return data
 }

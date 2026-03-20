@@ -52,7 +52,7 @@ export async function fetchSubmissions() {
 export async function fetchSesVerificationStatus(email) {
   addDebugLog('SES status request', { email });
   const { data } = await api.get('/api/admin/ses-verification-status', {
-    params: { email },
+    params: { email, _t: Date.now() },
   });
   addDebugLog('SES status response', {
     email,
