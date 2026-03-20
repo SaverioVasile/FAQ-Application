@@ -43,8 +43,9 @@ un'interfaccia responsive senza scrivere CSS personalizzato.
 
 Componenti principali:
 - Form questionario con validazione in tempo reale e preview punteggio
-- Tabella storico sottomissioni con aggiornamento automatico
-- Pannello admin per la verifica indirizzi email su AWS SES
+- Tabella storico sottomissioni con paginazione client-side (5 elementi/pagina)
+- Reinvio PDF dalle sottomissioni
+- Popup admin per la verifica indirizzi email su AWS SES (apertura contestuale su errori "email non verificata")
 
 ### Mobile — React Native (Expo)
 
@@ -56,6 +57,11 @@ Librerie principali:
 - `@react-navigation` — navigazione a tab (bottom tab navigator)
 - `axios` — chiamate HTTP al backend
 - `react-native-safe-area-context` — gestione aree sicure su diversi dispositivi
+
+La versione mobile mantiene 3 tab (`Questionario`, `Storico`, `Admin`), con logica funzionale allineata alla web app:
+- warning visivo quando il questionario è salvato ma l'invio email fallisce
+- reinvio PDF dallo storico
+- gestione verifica SES e reinvio di submission pending dalla tab Admin
 
 ---
 
@@ -151,6 +157,11 @@ a runtime tramite variabili d'ambiente nel file `.env`, senza modificare il codi
 | `APP_PDF_SAVE_LOCAL` | `true` / `false` | Abilita salvataggio locale dei report PDF |
 | `APP_PDF_OUTPUT_DIR` | path filesystem | Directory dove salvare i PDF quando il flag e attivo |
 
+Endpoint admin SES principali:
+- `POST /api/admin/ses-verify-email`
+- `GET /api/admin/ses-verification-status?email=...`
+- `GET /api/admin/mail-config`
+
 Con `APP_MAIL_ENABLED=false` il report viene comunque creato; se `APP_PDF_SAVE_LOCAL=true`
 il file viene persistito localmente per debugging o test end-to-end senza invio email.
 
@@ -164,10 +175,10 @@ dell'applicazione, garantendo consistenza tra locale e produzione.
 
 Per lo sviluppo locale è fornito un `docker-compose.yml` che avvia:
 - container **PostgreSQL** (con volume persistente)
-- container **backend** (immagine costruita dal Dockerfile `backend/`)
+- container **backend** (immagine costruita dal Dockerfile `backend/Dockerfile.local`)
 - container **frontend** (immagine costruita dal Dockerfile `frontend/`)
 
-Tutti i servizi comunicano sulla rete Docker interna `faq-network`.
+I servizi comunicano sulla rete Docker creata automaticamente da Compose.
 
 ### Strategia di test backend
 

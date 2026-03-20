@@ -53,7 +53,7 @@ story.append(Paragraph("Applicazione Questionario FAQ", styles['Normal']))
 story.append(Spacer(1, 0.5*cm))
 
 # Introduction
-story.append(Paragraph("Benvenuto", heading_style))
+story.append(Paragraph("Introduzione", heading_style))
 story.append(Paragraph(
     "Questa guida spiega come usare l'applicazione per compilare il questionario FAQ "
     "(Functional Activities Questionnaire). L'app è disponibile sia da web (browser) che da mobile (iOS/Android con Expo Go).",
@@ -61,7 +61,7 @@ story.append(Paragraph(
 ))
 story.append(Paragraph(
     "Il flusso principale è lo stesso su entrambe le versioni: compilazione del questionario, invio, "
-    "consultazione dello storico e, quando disponibile, uso della sezione Admin per SES.",
+    "consultazione dello storico e uso della sezione Admin quando la gestione SES è disponibile.",
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
@@ -102,7 +102,8 @@ story.append(Spacer(1, 0.2*cm))
 story.append(Paragraph(
     "<b>Passo 4: Invio del questionario</b><br/>"
     "Una volta compilate tutte le domande, viene selezionato il pulsante <b>\"Invia questionario\"</b>. "
-    "Il sistema calcolerà il punteggio totale e genererà un report PDF che sarà inviato all'email inserita.",
+    "Il sistema calcolerà il punteggio totale e genererà un report PDF che sarà inviato all'email inserita. "
+    "In caso di indirizzo non verificato su SES, il questionario resta salvato e può essere inviato successivamente senza ricompilazione.",
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
@@ -116,8 +117,8 @@ story.append(Paragraph(
 story.append(Paragraph(
     "<b>Tab disponibili</b><br/>"
     "• <b>Questionario</b>: compilazione e invio del test FAQ<br/>"
-    "• <b>Storico</b>: elenco delle ultime submissioni con aggiornamento rapido<br/>"
-    "• <b>Admin</b>: compare solo quando la verifica indirizzi SES è disponibile",
+    "• <b>Storico</b>: elenco delle ultime sottomissioni con paginazione e azione \"Reinvia PDF\"<br/>"
+    "• <b>Admin</b>: gestione verifica SES e reinvio del report già compilato quando necessario",
     body_style
 ))
 story.append(Paragraph(
@@ -140,14 +141,21 @@ story.append(Paragraph(
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
+story.append(Paragraph(
+    "Ogni riga include il pulsante <b>\"Reinvia PDF\"</b>. Se l'indirizzo risulta non verificato su SES, "
+    "la procedura guida verso la sezione Admin; dopo la verifica il report viene inviato senza dover reinserire il questionario.",
+    body_style
+))
+story.append(Spacer(1, 0.3*cm))
 
 # Section 3: Admin - SES verification
 story.append(Paragraph("Pannello Admin - Verifica Indirizzi Email (SES)", heading_style))
 story.append(Paragraph(
     "<b>Quando appare questa sezione?</b><br/>"
-    "La sezione admin per la verifica degli indirizzi email appare <b>solo</b> quando "
-    "il sistema sta usando AWS SES per la gestione delle email. "
-    "Quando SES non è attivo, questa sezione non sarà visibile né nella web app né nell'app mobile.",
+    "Le funzioni di verifica indirizzi email sono attive quando il sistema usa AWS SES "
+    "(provider `ses` o SMTP SES). "
+    "Nel frontend web si apre un popup contestuale in caso di errore di verifica; "
+    "nell'app mobile la gestione è disponibile nella tab Admin.",
     body_style
 ))
 story.append(Spacer(1, 0.2*cm))
@@ -160,15 +168,16 @@ story.append(Paragraph(
     "2. Viene selezionato <b>\"Invia richiesta verifica\"</b><br/>"
     "3. AWS invierà una email di verifica all'indirizzo inserito<br/>"
     "4. L'utente riceverà un'email con un link di conferma<br/>"
-    "5. Dopo aver cliccato il link, l'indirizzo sarà verificato e potrà ricevere email dal sistema",
+    "5. Dopo aver cliccato il link, l'indirizzo sarà verificato e potrà ricevere email dal sistema<br/>"
+    "6. Il pulsante \"Aggiorna stato\" consente di riallineare lo stato e procedere al reinvio del report pendente",
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
 
 # Footer note
 story.append(Paragraph(
-    "<b>Nota importante:</b> Se il provider email è SMTP (es. Gmail), "
-    "gli indirizzi email non richiedono verifica preliminare e il pannello Admin non sarà disponibile.",
+    "<b>Nota importante:</b> Se il provider email è SMTP generico (es. Gmail), "
+    "gli indirizzi email non richiedono verifica preliminare SES.",
     body_style
 ))
 

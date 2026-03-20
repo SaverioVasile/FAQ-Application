@@ -7,8 +7,9 @@ Applicazione end-to-end per la compilazione del questionario FAQ DeepTrace:
 - Generazione automatica report PDF
 - Invio report via email (SMTP o AWS SES)
 - Salvataggio locale opzionale dei PDF generati (anche con email disabilitata)
-- Visualizzazione storico sottomissioni
-- Pannello admin per verifica indirizzi email SES
+- Visualizzazione storico sottomissioni con paginazione (5 record per pagina)
+- Reinvio PDF dalle sottomissioni senza ricompilare il questionario
+- Gestione verifica indirizzi email SES (popup admin web + tab Admin mobile)
 
 ---
 
@@ -76,6 +77,12 @@ Apri `.env` e compila almeno le variabili obbligatorie (vedi sezione Configurazi
 
 ```bash
 docker compose up --build
+```
+
+Se si usa Colima con profilo custom (es. `personal`), usare:
+
+```bash
+DOCKER_HOST=unix://$HOME/.colima/personal/docker.sock docker compose up --build
 ```
 
 Questo comando va bene su macOS, Linux e Windows. Al primo avvio il backend viene compilato dentro il container, quindi il build puo' richiedere un po' di tempo.
@@ -208,6 +215,11 @@ EXPO_PUBLIC_API_BASE_URL_PUBLIC=https://your-backend.example.com
 EXPO_PUBLIC_SHOW_DEBUG_OVERLAY=true
 ```
 
+Nota importante su `EXPO_PUBLIC_API_BASE_URL_LOCAL`:
+- dispositivo fisico (Expo Go): usare IP LAN del PC/Mac (non `localhost`)
+- iOS simulator: usare `http://localhost:8080`
+- Android emulator: usare `http://10.0.2.2:8080`
+
 Esempio `.env` per backend pubblico:
 
 ```dotenv
@@ -220,7 +232,7 @@ Avvio Expo:
 
 ```bash
 cd mobile
-npm start -- --clear
+npx expo start --clear
 ```
 
 Apri Expo Go sul telefono e scansiona il QR code mostrato nel terminale/browser.
@@ -246,8 +258,10 @@ Copertura minima attuale lato backend:
 |---|---|---|
 | POST | `/api/submissions` | Invia questionario |
 | GET | `/api/submissions` | Lista sottomissioni |
+| POST | `/api/submissions/{id}/resend-email` | Reinvia email con PDF già generato dalla sottomissione |
 | GET | `/api/admin/mail-config` | Stato provider mail per UI admin |
 | POST | `/api/admin/ses-verify-email` | Richiedi verifica email SES |
+| GET | `/api/admin/ses-verification-status?email=...` | Stato verifica SES per indirizzo |
 
 **Payload POST `/api/submissions`:**
 ```json
@@ -273,7 +287,7 @@ Build del jar:
 
 ```bash
 cd backend
-mvn clean package
+mvn clean package -s ../.mvn-settings-personal.xml
 ```
 
 Creazione dello zip di deploy:
