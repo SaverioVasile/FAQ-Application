@@ -160,7 +160,7 @@ export default function QuestionnaireScreen({ navigation, sesAdminAvailable, set
               placeholderTextColor="#94a3b8"
             />
 
-            <Text style={styles.label}>Compilatore *</Text>
+            <Text style={styles.label}>Soggetto *</Text>
             <View style={styles.buttonGroup}>
               {RESPONDENT_TYPES.map(({ value, label }) => (
                 <TouchableOpacity
@@ -187,7 +187,7 @@ export default function QuestionnaireScreen({ navigation, sesAdminAvailable, set
                   style={styles.input}
                   value={respondentOther}
                   onChangeText={setRespondentOther}
-                  placeholder="Specifica il tipo di compilatore"
+                  placeholder="Specifica il tipo di soggetto"
                   placeholderTextColor="#94a3b8"
                 />
               </>

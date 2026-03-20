@@ -459,7 +459,7 @@ const adminVerificationMessage = computed(() => {
             </label>
 
             <label class="text-sm font-medium text-slate-700">
-              Compilatore
+              Soggetto
               <select
                 v-model="form.respondentType"
                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
@@ -538,7 +538,7 @@ const adminVerificationMessage = computed(() => {
               <tr>
                 <th class="py-2 pr-4">ID</th>
                 <th class="py-2 pr-4">Email</th>
-                <th class="py-2 pr-4">Compilatore</th>
+                <th class="py-2 pr-4">Soggetto</th>
                 <th class="py-2 pr-4">Totale</th>
                 <th class="py-2 pr-4">Email inviata</th>
                 <th class="py-2 pr-4">Data</th>

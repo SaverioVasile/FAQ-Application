@@ -61,7 +61,7 @@ story.append(Paragraph(
 ))
 story.append(Paragraph(
     "Il flusso principale è lo stesso su entrambe le versioni: compilazione del questionario, invio, "
-    "consultazione dello storico e uso della sezione Admin quando la gestione SES è disponibile.",
+    "consultazione dello storico e uso della sezione Admin quando è abilitato AWS SES come provider per l'invio delle email.",
     body_style
 ))
 story.append(Spacer(1, 0.3*cm))
@@ -77,7 +77,7 @@ story.append(Paragraph(
 story.append(Spacer(1, 0.2*cm))
 
 story.append(Paragraph(
-    "<b>Passo 2: Selezione del compilatore</b><br/>"
+    "<b>Passo 2: Selezione del soggetto</b><br/>"
     "Si seleziona chi sta compilando il questionario tra le opzioni:<br/>"
     "• <b>Paziente</b> - se è il paziente stesso<br/>"
     "• <b>Caregiver</b> - se è il caregiver/assistente<br/>"
@@ -89,19 +89,19 @@ story.append(Spacer(1, 0.2*cm))
 story.append(Paragraph(
     "<b>Passo 3: Compilazione delle 10 domande</b><br/>"
     "Si compilano tutte le domande usando la scala da 0 a 5, dove:<br/>"
-    "• <b>0</b> = Normale, senza difficoltà<br/>"
-    "• <b>1</b> = Normalmente, senza difficoltà, con qualche incertezza<br/>"
-    "• <b>2</b> = Normalmente, con molta difficoltà<br/>"
-    "• <b>3</b> = Non normalmente, con molta difficoltà; utente non è capace di svolgere compiti non abituali<br/>"
-    "• <b>4</b> = Non normalmente, con molta difficoltà; utente non è capace di svolgere compiti abituali<br/>"
-    "• <b>5</b> = Incapace di compiere il compito per qualsiasi motivo",
+    "• <b>0</b> = Attività svolta normalmente (autonomia completa)<br/>"
+    "• <b>1</b> = Attività non svolta abitualmente, ma che il paziente sarebbe in grado di eseguire<br/>"
+    "• <b>2</b> = Attività non svolta abitualmente e che, se eseguita, richiederebbe assistenza<br/>"
+    "• <b>3</b> = Attività svolta in modo autonomo ma con difficoltà<br/>"
+    "• <b>4</b> = Attività svolta solo con assistenza<br/>"
+    "• <b>5</b> = Dipendenza completa",
     body_style
 ))
 story.append(Spacer(1, 0.2*cm))
 
 story.append(Paragraph(
     "<b>Passo 4: Invio del questionario</b><br/>"
-    "Una volta compilate tutte le domande, viene selezionato il pulsante <b>\"Invia questionario\"</b>. "
+    "Una volta compilate tutte le domande, va selezionato il pulsante <b>\"Invia questionario\"</b>. "
     "Il sistema calcolerà il punteggio totale e genererà un report PDF che sarà inviato all'email inserita. "
     "In caso di indirizzo non verificato su SES, il questionario resta salvato e può essere inviato successivamente senza ricompilazione.",
     body_style
@@ -121,10 +121,6 @@ story.append(Paragraph(
     "• <b>Admin</b>: gestione verifica SES e reinvio del report già compilato quando necessario",
     body_style
 ))
-story.append(Paragraph(
-    "Nell'app mobile non occorre imparare un flusso diverso: cambia soprattutto la navigazione, mentre i dati richiesti e il risultato finale restano gli stessi della versione web.",
-    body_style
-))
 story.append(Spacer(1, 0.3*cm))
 
 # Section 2: History
@@ -134,7 +130,7 @@ story.append(Paragraph(
     "l'elenco dei questionari compilati. Sono visibili i seguenti dettagli per ogni submissione:<br/>"
     "• <b>ID</b> - numero identificativo della submissione<br/>"
     "• <b>Email</b> - email del paziente<br/>"
-    "• <b>Compilatore</b> - chi ha compilato il questionario<br/>"
+    "• <b>Soggetto</b> - chi ha compilato il questionario<br/>"
     "• <b>Totale</b> - punteggio totale ottenuto<br/>"
     "• <b>Email inviata</b> - se il report è stato inviato per email<br/>"
     "• <b>Data</b> - quando è stata compilata",
