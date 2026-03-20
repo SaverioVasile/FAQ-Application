@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { requestSesEmailVerification } from '../services/api';
+import { addDebugLog } from '../services/debugLog';
 
 export default function AdminScreen() {
   const [email, setEmail] = useState('');
@@ -34,13 +35,20 @@ export default function AdminScreen() {
     setError('');
 
     try {
+      addDebugLog('Admin verify submit', { email });
       const res = await requestSesEmailVerification(email);
       setMessage(
         res.message ||
           'Richiesta di verifica inviata. Controlla la casella email del destinatario.',
       );
+      addDebugLog('Admin verify success', { email, message: res?.message || '' });
       setEmail('');
     } catch (err) {
+      addDebugLog('Admin verify error', {
+        email,
+        status: err?.response?.status || 'NO_RESPONSE',
+        message: err?.response?.data?.message || err?.message || 'Unknown error',
+      });
       setError(
         err?.response?.data?.message || 'Errore durante la richiesta di verifica.',
       );
@@ -120,7 +128,6 @@ export default function AdminScreen() {
   );
 }
 
-const INDIGO = '#4f46e5';
 const SLATE_900 = '#0f172a';
 const SLATE_700 = '#334155';
 const SLATE_600 = '#475569';

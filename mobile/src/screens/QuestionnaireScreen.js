@@ -28,6 +28,7 @@ export default function QuestionnaireScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [showLegend, setShowLegend] = useState(false);
 
   const totalPreview = useMemo(
@@ -60,6 +61,7 @@ export default function QuestionnaireScreen() {
 
     setIsSubmitting(true);
     setError('');
+    setWarning('');
     setResult(null);
 
     try {
@@ -71,6 +73,9 @@ export default function QuestionnaireScreen() {
       };
       const data = await submitQuestionnaire(payload);
       setResult(data);
+      if (data?.emailSent === false) {
+        setWarning(data?.message || 'Questionario salvato, ma invio email non completato.');
+      }
       // reset form
       setPatientEmail('');
       setRespondentType('CAREGIVER');
@@ -206,13 +211,21 @@ export default function QuestionnaireScreen() {
               </View>
             )}
 
+            {warning !== '' && (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningText}>⚠ {warning}</Text>
+              </View>
+            )}
+
             {result && (
-              <View style={styles.successBox}>
-                <Text style={styles.successText}>✓ {result.message}</Text>
-                <Text style={styles.successDetail}>
+              <View style={result.emailSent ? styles.successBox : styles.warningBox}>
+                <Text style={result.emailSent ? styles.successText : styles.warningText}>
+                  {result.emailSent ? '✓' : '⚠'} {result.message}
+                </Text>
+                <Text style={result.emailSent ? styles.successDetail : styles.warningDetail}>
                   ID: {result.submissionId} | Punteggio: {result.totalScore}
                 </Text>
-                <Text style={styles.successDetail}>
+                <Text style={result.emailSent ? styles.successDetail : styles.warningDetail}>
                   Email inviata: {result.emailSent ? 'Sì' : 'No'}
                 </Text>
               </View>
@@ -312,6 +325,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: { fontSize: 13, color: '#b91c1c' },
+  warningBox: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  warningText: { fontSize: 13, color: '#b45309' },
+  warningDetail: { fontSize: 12, color: '#92400e', marginTop: 4 },
   successBox: {
     backgroundColor: '#f0fdf4',
     borderRadius: 8,

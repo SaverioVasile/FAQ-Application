@@ -4,6 +4,7 @@ import { faqQuestions, scoreLegend } from './constants/questions'
 import {
   fetchSubmissions,
   submitQuestionnaire,
+  resendSubmissionEmail,
   requestSesEmailVerification,
   fetchMailConfig
 } from './services/api'
@@ -17,6 +18,7 @@ const form = reactive({
 
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const warningMessage = ref('')
 const successMessage = ref('')
 const result = ref(null)
 const submissions = ref([])
@@ -26,6 +28,14 @@ const adminMessage = ref('')
 const adminError = ref('')
 const isAdminSubmitting = ref(false)
 const sesAdminAvailable = ref(false)
+const showAdminModal = ref(false)
+const resendStatus = ref('')
+const resendStatusWarning = ref(false)
+const resendError = ref('')
+const resendLoadingId = ref(null)
+const pendingSubmissionId = ref(null)
+const pendingSubmissionEmail = ref('')
+const isAdminResending = ref(false)
 
 const totalPreview = computed(() =>
   form.answers.reduce((acc, value) => acc + (value === '' ? 0 : Number(value)), 0)
@@ -43,6 +53,27 @@ const canSubmit = computed(() => {
 
 const showSesAdmin = computed(() => sesAdminAvailable.value)
 
+function logSesDebug(event, details = {}) {
+  console.log('[SES Admin]', event, details)
+}
+
+function isSesUnverifiedMessage(value) {
+  if (!value) return false
+  const normalized = String(value).toLowerCase()
+  return normalized.includes('email address is not verified') || normalized.includes('not verified')
+}
+
+function openAdminModalForSesIssue(message) {
+  if (!showSesAdmin.value || !isSesUnverifiedMessage(message)) {
+    return
+  }
+  showAdminModal.value = true
+  if (!adminEmail.value && form.patientEmail) {
+    adminEmail.value = form.patientEmail
+  }
+  logSesDebug('Opening SES admin modal after submit warning', { message, patientEmail: form.patientEmail })
+}
+
 async function loadSubmissions() {
   try {
     submissions.value = await fetchSubmissions()
@@ -55,16 +86,26 @@ async function loadMailConfig() {
   try {
     const config = await fetchMailConfig()
     sesAdminAvailable.value = Boolean(config?.sesAdminAvailable)
+    logSesDebug('Mail config loaded', {
+      provider: config?.mailProvider,
+      enabled: config?.mailEnabled,
+      sesAdminAvailable: sesAdminAvailable.value
+    })
   } catch {
     // Fallback sicuro: nasconde la sezione admin SES se il check config fallisce.
     sesAdminAvailable.value = false
+    logSesDebug('Mail config load failed')
   }
 }
 
 async function onSubmit() {
   isSubmitting.value = true
   errorMessage.value = ''
+  warningMessage.value = ''
   successMessage.value = ''
+  resendStatus.value = ''
+  resendStatusWarning.value = false
+  resendError.value = ''
   result.value = null
 
   try {
@@ -76,7 +117,16 @@ async function onSubmit() {
     }
 
     result.value = await submitQuestionnaire(payload)
-    successMessage.value = result.value.message
+    if (result.value?.emailSent === false) {
+      pendingSubmissionId.value = result.value?.submissionId ?? null
+      pendingSubmissionEmail.value = payload.patientEmail
+      warningMessage.value = result.value?.message || 'Questionario salvato, ma invio email non completato.'
+      openAdminModalForSesIssue(warningMessage.value)
+    } else {
+      pendingSubmissionId.value = null
+      pendingSubmissionEmail.value = ''
+      successMessage.value = result.value.message
+    }
 
     form.patientEmail = ''
     form.respondentType = 'CAREGIVER'
@@ -85,9 +135,94 @@ async function onSubmit() {
 
     await loadSubmissions()
   } catch (error) {
-    errorMessage.value = error?.response?.data?.message || 'Errore durante la sottomissione.'
+    const message = error?.response?.data?.message || 'Errore durante la sottomissione.'
+    errorMessage.value = message
+    logSesDebug('Submit failed', {
+      status: error?.response?.status,
+      message,
+      patientEmail: form.patientEmail
+    })
+    openAdminModalForSesIssue(message)
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function onResendEmail(submissionId) {
+  resendLoadingId.value = submissionId
+  resendStatus.value = ''
+  resendStatusWarning.value = false
+  resendError.value = ''
+
+  try {
+    const res = await resendSubmissionEmail(submissionId)
+    if (res?.emailSent === false) {
+      resendStatus.value = res?.message || 'Reinvio eseguito, ma invio email non completato.'
+      resendStatusWarning.value = true
+      openAdminModalForSesIssue(resendStatus.value)
+    } else {
+      resendStatus.value = res?.message || 'Email reinviata con successo.'
+      resendStatusWarning.value = false
+      if (pendingSubmissionId.value === submissionId) {
+        pendingSubmissionId.value = null
+        pendingSubmissionEmail.value = ''
+      }
+    }
+    await loadSubmissions()
+  } catch (error) {
+    const message = error?.response?.data?.message || 'Errore durante il reinvio della mail.'
+    resendError.value = message
+    logSesDebug('Resend failed', {
+      status: error?.response?.status,
+      submissionId,
+      message
+    })
+    openAdminModalForSesIssue(message)
+  } finally {
+    resendLoadingId.value = null
+  }
+}
+
+async function resendPendingSubmissionFromAdmin() {
+  if (!pendingSubmissionId.value) {
+    return
+  }
+
+  isAdminResending.value = true
+  adminError.value = ''
+
+  try {
+    logSesDebug('Admin resend pending submission', {
+      submissionId: pendingSubmissionId.value,
+      email: pendingSubmissionEmail.value
+    })
+    const res = await resendSubmissionEmail(pendingSubmissionId.value)
+    await loadSubmissions()
+
+    if (res?.emailSent === false) {
+      adminError.value = res?.message || 'Invio non completato. Verificare l\'email SES e riprovare.'
+      resendStatus.value = adminError.value
+      resendStatusWarning.value = true
+    } else {
+      const sentMessage = res?.message || 'Report inviato con successo usando il questionario gia compilato.'
+      adminMessage.value = sentMessage
+      resendStatus.value = sentMessage
+      resendStatusWarning.value = false
+      pendingSubmissionId.value = null
+      pendingSubmissionEmail.value = ''
+      showAdminModal.value = false
+    }
+  } catch (error) {
+    const message = error?.response?.data?.message || 'Errore durante l\'invio del report gia compilato.'
+    adminError.value = message
+    resendError.value = message
+    logSesDebug('Admin resend pending submission failed', {
+      status: error?.response?.status,
+      submissionId: pendingSubmissionId.value,
+      message
+    })
+  } finally {
+    isAdminResending.value = false
   }
 }
 
@@ -99,10 +234,28 @@ async function onAdminRequestVerification() {
   adminError.value = ''
 
   try {
-    const res = await requestSesEmailVerification(adminEmail.value)
+    const currentAdminEmail = adminEmail.value.trim()
+    logSesDebug('Sending verify request', { email: currentAdminEmail })
+    const res = await requestSesEmailVerification(currentAdminEmail)
     adminMessage.value = res.message || 'Richiesta di verifica inviata. Controlla la casella email del destinatario.'
+    logSesDebug('Verify request completed', { email: currentAdminEmail, response: res })
+
+    if (
+      pendingSubmissionId.value &&
+      pendingSubmissionEmail.value &&
+      pendingSubmissionEmail.value.toLowerCase() === currentAdminEmail.toLowerCase()
+    ) {
+      await resendPendingSubmissionFromAdmin()
+    }
   } catch (error) {
-    adminError.value = error?.response?.data?.message || 'Errore durante la richiesta di verifica.'
+    const message = error?.response?.data?.message || 'Errore durante la richiesta di verifica.'
+    adminError.value = message
+    logSesDebug('Verify request failed', {
+      status: error?.response?.status,
+      email: adminEmail.value,
+      message,
+      payload: error?.response?.data
+    })
   } finally {
     isAdminSubmitting.value = false
   }
@@ -202,6 +355,7 @@ onMounted(async () => {
         </form>
 
         <p v-if="errorMessage" class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorMessage }}</p>
+        <p v-if="warningMessage" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{{ warningMessage }}</p>
         <p v-if="successMessage" class="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{{ successMessage }}</p>
 
         <div v-if="result" class="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
@@ -223,6 +377,7 @@ onMounted(async () => {
                 <th class="py-2 pr-4">Totale</th>
                 <th class="py-2 pr-4">Email inviata</th>
                 <th class="py-2 pr-4">Data</th>
+                <th class="py-2 pr-4">Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -233,46 +388,97 @@ onMounted(async () => {
                 <td class="py-2 pr-4">{{ item.totalScore }}</td>
                 <td class="py-2 pr-4">{{ item.emailSent ? 'Si' : 'No' }}</td>
                 <td class="py-2 pr-4">{{ new Date(item.submittedAt).toLocaleString('it-IT') }}</td>
+                <td class="py-2 pr-4">
+                  <button
+                    type="button"
+                    class="rounded-md bg-slate-800 px-3 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+                    :disabled="resendLoadingId === item.id"
+                    @click="onResendEmail(item.id)"
+                  >
+                    {{ resendLoadingId === item.id ? 'Reinvio...' : 'Reinvia PDF' }}
+                  </button>
+                </td>
               </tr>
               <tr v-if="submissions.length === 0">
-                <td colspan="6" class="py-4 text-slate-500">Nessuna sottomissione disponibile.</td>
+                <td colspan="7" class="py-4 text-slate-500">Nessuna sottomissione disponibile.</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section v-if="showSesAdmin" class="rounded-xl bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">Admin - Verifica indirizzi email SES</h2>
-        <p class="mt-2 text-sm text-slate-600">
-          Inserisci un indirizzo email per cui inviare la richiesta di verifica SES. L'utente dovrà aprire l'email
-          inviata da AWS e cliccare sul link per completare la verifica.
+        <p
+          v-if="resendStatus"
+          class="mt-3 rounded-lg px-3 py-2 text-sm"
+          :class="resendStatusWarning ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'"
+        >
+          {{ resendStatus }}
         </p>
-
-        <form class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" @submit.prevent="onAdminRequestVerification">
-          <input
-            v-model="adminEmail"
-            type="email"
-            required
-            class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            placeholder="email-da-verificare@example.com"
-          />
-          <button
-            type="submit"
-            :disabled="isAdminSubmitting"
-            class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {{ isAdminSubmitting ? 'Invio richiesta...' : 'Invia richiesta verifica' }}
-          </button>
-        </form>
-
-        <p v-if="adminMessage" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          {{ adminMessage }}
-        </p>
-        <p v-if="adminError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {{ adminError }}
+        <p v-if="resendError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ resendError }}
         </p>
       </section>
+
+      <button
+        v-if="showSesAdmin"
+        type="button"
+        class="fixed bottom-6 right-6 rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg"
+        @click="showAdminModal = true"
+      >
+        Admin SES
+      </button>
+
+      <div
+        v-if="showSesAdmin && showAdminModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      >
+        <section class="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl">
+          <div class="flex items-start justify-between gap-3">
+            <h2 class="text-lg font-semibold text-slate-900">Admin - Verifica indirizzi email SES</h2>
+            <button type="button" class="text-sm text-slate-500" @click="showAdminModal = false">Chiudi</button>
+          </div>
+          <p class="mt-2 text-sm text-slate-600">
+            Inserisci un indirizzo email per cui inviare la richiesta di verifica SES. L'utente dovrà aprire l'email
+            inviata da AWS e cliccare sul link per completare la verifica.
+          </p>
+
+          <form class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center" @submit.prevent="onAdminRequestVerification">
+            <input
+              v-model="adminEmail"
+              type="email"
+              required
+              class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              placeholder="email-da-verificare@example.com"
+            />
+            <button
+              type="submit"
+              :disabled="isAdminSubmitting"
+              class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {{ isAdminSubmitting ? 'Invio richiesta...' : 'Invia richiesta verifica' }}
+            </button>
+          </form>
+
+          <div v-if="pendingSubmissionId" class="mt-3 rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-700">
+            <p>
+              E presente un questionario gia compilato per <strong>{{ pendingSubmissionEmail }}</strong>.
+            </p>
+            <button
+              type="button"
+              :disabled="isAdminResending"
+              class="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+              @click="resendPendingSubmissionFromAdmin"
+            >
+              {{ isAdminResending ? 'Invio report...' : 'Invia report gia compilato' }}
+            </button>
+          </div>
+
+          <p v-if="adminMessage" class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+            {{ adminMessage }}
+          </p>
+          <p v-if="adminError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ adminError }}
+          </p>
+        </section>
+      </div>
     </div>
   </main>
 </template>

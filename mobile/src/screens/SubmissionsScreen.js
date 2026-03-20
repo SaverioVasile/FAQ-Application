@@ -6,21 +6,27 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { fetchSubmissions } from '../services/api';
+import { fetchSubmissions, resendSubmissionEmail } from '../services/api';
 
 export default function SubmissionsScreen() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
+  const [actionWarning, setActionWarning] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [resendingId, setResendingId] = useState(null);
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError('');
+    setActionError('');
     try {
       const data = await fetchSubmissions();
       setSubmissions(data);
@@ -38,6 +44,23 @@ export default function SubmissionsScreen() {
       loadData();
     }, [loadData]),
   );
+
+  async function handleResendEmail(submissionId) {
+    setResendingId(submissionId);
+    setActionMessage('');
+    setActionWarning(false);
+    setActionError('');
+    try {
+      const data = await resendSubmissionEmail(submissionId);
+      setActionMessage(data?.message || 'Reinvio completato.');
+      setActionWarning(data?.emailSent === false);
+      await loadData();
+    } catch (err) {
+      setActionError(err?.response?.data?.message || 'Errore durante il reinvio della mail.');
+    } finally {
+      setResendingId(null);
+    }
+  }
 
   function renderItem({ item }) {
     const date = new Date(item.submittedAt).toLocaleString('it-IT');
@@ -57,6 +80,15 @@ export default function SubmissionsScreen() {
           <Text style={styles.score}>Punteggio: {item.totalScore}</Text>
           <Text style={styles.meta}>{date}</Text>
         </View>
+        <TouchableOpacity
+          style={[styles.resendButton, resendingId === item.id && styles.resendButtonDisabled]}
+          onPress={() => handleResendEmail(item.id)}
+          disabled={resendingId === item.id}
+        >
+          <Text style={styles.resendButtonText}>
+            {resendingId === item.id ? 'Reinvio...' : 'Reinvia PDF'}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -87,7 +119,19 @@ export default function SubmissionsScreen() {
           />
         }
         ListHeaderComponent={
-          <Text style={styles.header}>Storico sottomissioni</Text>
+          <View>
+            <Text style={styles.header}>Storico sottomissioni</Text>
+            {actionMessage ? (
+              <View style={actionWarning ? styles.warningBox : styles.successBox}>
+                <Text style={actionWarning ? styles.warningText : styles.successText}>{actionMessage}</Text>
+              </View>
+            ) : null}
+            {actionError ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{actionError}</Text>
+              </View>
+            ) : null}
+          </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -143,6 +187,43 @@ const styles = StyleSheet.create({
   },
   meta: { fontSize: 12, color: SLATE_600 },
   score: { fontSize: 12, fontWeight: '700', color: INDIGO },
+  resendButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  resendButtonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  resendButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  successBox: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  successText: { fontSize: 13, color: '#15803d' },
+  warningBox: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  warningText: { fontSize: 13, color: '#b45309' },
+  errorBox: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  errorText: { fontSize: 13, color: '#b91c1c' },
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { color: SLATE_600, fontSize: 14, textAlign: 'center' },
 });

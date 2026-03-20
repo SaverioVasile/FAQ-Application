@@ -50,7 +50,20 @@ export async function fetchSubmissions() {
 }
 
 export async function requestSesEmailVerification(email) {
+  addDebugLog('SES verify request', { email });
   const { data } = await api.post('/api/admin/ses-verify-email', { email });
+  addDebugLog('SES verify response', { email, message: data?.message || '' });
+  return data;
+}
+
+export async function resendSubmissionEmail(submissionId) {
+  addDebugLog('Resend email request', { submissionId });
+  const { data } = await api.post(`/api/submissions/${submissionId}/resend-email`);
+  addDebugLog('Resend email response', {
+    submissionId,
+    emailSent: data?.emailSent,
+    message: data?.message || '',
+  });
   return data;
 }
 

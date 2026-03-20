@@ -14,6 +14,11 @@ export async function fetchSubmissions() {
   return data
 }
 
+export async function resendSubmissionEmail(submissionId) {
+  const { data } = await api.post(`/api/submissions/${submissionId}/resend-email`)
+  return data
+}
+
 export async function requestSesEmailVerification(email) {
   const { data } = await api.post('/api/admin/ses-verify-email', { email })
   return data
